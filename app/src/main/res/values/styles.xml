@@ -6,4 +6,5 @@
         <item name="android:navigationBarColor">#080B14</item>
         <item name="android:windowActionModeOverlay">true</item>
     </style>
+    <style name="SplashTheme" parent="@style/AppTheme" />
 </resources>
