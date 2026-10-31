@@ -95,7 +95,7 @@ private fun SudhaBrowserApp(context: Context) {
     var showClearDataDialog by remember { mutableStateOf(false) }
     var searchEngine by remember { mutableStateOf(prefs.getString("search_engine", "Google") ?: "Google") }
     var showSearchEngines by remember { mutableStateOf(false) }
-    var textZoom by remember { mutableIntStateOf(prefs.getInt("text_zoom", 100).coerceIn(75, 200)) }
+    var textZoom by remember { mutableIntStateOf(prefs.getInt("text_zoom", 100).coerceIn(75, 500)) }
     var showFindBar by remember { mutableStateOf(false) }
     var readerMode by remember { mutableStateOf(false) }
     var javaScriptEnabled by remember { mutableStateOf(prefs.getBoolean("javascript_enabled", true)) }
@@ -351,7 +351,7 @@ private fun SudhaBrowserApp(context: Context) {
                         Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             Text("Website text size", color = Color.White, style = MaterialTheme.typography.titleMedium)
                             Text("$textZoom%", color = Cyan, style = MaterialTheme.typography.labelLarge)
-                            Slider(value = textZoom.toFloat(), onValueChange = { textZoom = it.toInt().coerceIn(75, 200) }, valueRange = 75f..200f, onValueChangeFinished = { prefs.edit().putInt("text_zoom", textZoom).apply(); tabs.forEach { it.webView?.settings?.textZoom = textZoom } })
+                            Slider(value = textZoom.toFloat(), onValueChange = { textZoom = it.toInt().coerceIn(75, 500) }, valueRange = 75f..500f, onValueChangeFinished = { prefs.edit().putInt("text_zoom", textZoom).apply(); tabs.forEach { it.webView?.settings?.textZoom = textZoom } })
                             Text("Adjust webpage text without changing image or layout zoom.", color = Color.LightGray, style = MaterialTheme.typography.bodySmall)
                         }
                         HorizontalDivider(color = Color(0xFF29364B))
