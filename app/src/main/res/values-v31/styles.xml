@@ -4,6 +4,5 @@
         <item name="android:windowSplashScreenAnimatedIcon">@drawable/sudha_splash_animated</item>
         <item name="android:windowSplashScreenAnimationDuration">1400</item>
         <item name="android:windowSplashScreenIconBackgroundColor">#111A2B</item>
-        <item name="android:postSplashScreenTheme">@style/AppTheme</item>
     </style>
 </resources>
