@@ -209,6 +209,9 @@ private fun SudhaBrowserApp(context: Context) {
     var savedSearch by remember { mutableStateOf("") }
     var sortBookmarksAZ by remember { mutableStateOf(false) }
     var selectedBookmarkFolder by remember { mutableStateOf("All") }
+    val customBookmarkFolders = remember { mutableStateListOf<String>().also { folders -> folders.addAll(prefs.getStringSet("bookmark_folders", emptySet())?.toList()?.sorted() ?: emptyList()) } }
+    var showCreateBookmarkFolderDialog by remember { mutableStateOf(false) }
+    var newBookmarkFolderName by remember { mutableStateOf("") }
     var bookmarkFolderMenuUrl by remember { mutableStateOf<String?>(null) }
     var showBookmarkEditDialog by remember { mutableStateOf(false) }
     var bookmarkEditUrl by remember { mutableStateOf("") }
@@ -900,11 +903,12 @@ private fun SudhaBrowserApp(context: Context) {
                         if (screen == "bookmarks") {
                             Text("${bookmarks.size} saved bookmarks", color = Color.Gray, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(start = 16.dp))
                             Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                (listOf("All", "General") + bookmarks.map { it.folder }.distinct().filter { it != "General" }.sorted()).forEach { folder ->
+                                (listOf("All", "General") + (bookmarks.map { it.folder } + customBookmarkFolders).distinct().filter { it != "General" }.sorted()).forEach { folder ->
                                     FilterChip(selected = selectedBookmarkFolder == folder, onClick = { selectedBookmarkFolder = folder }, label = { Text(folder, maxLines = 1) })
                                 }
                             }
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                                TextButton(onClick = { newBookmarkFolderName = ""; showCreateBookmarkFolderDialog = true }) { Text("New folder +", color = Cyan) }
                                 TextButton(onClick = { sortBookmarksAZ = !sortBookmarksAZ }) { Text(if (sortBookmarksAZ) "Sort: A–Z" else "Sort: Recent", color = Cyan) }
                                 TextButton(onClick = { importBookmarksText = ""; showImportBookmarksDialog = true }) { Text("Import", color = Cyan) }
                                 TextButton(onClick = {
@@ -926,7 +930,7 @@ private fun SudhaBrowserApp(context: Context) {
                                         Box {
                                             IconButton(onClick = { bookmarkFolderMenuUrl = item.url }) { Icon(Icons.Default.MoreVert, "Bookmark folder", tint = Cyan) }
                                             DropdownMenu(expanded = bookmarkFolderMenuUrl == item.url, onDismissRequest = { bookmarkFolderMenuUrl = null }) {
-                                                listOf("General", "Personal", "Work", "Study", "Shopping").forEach { folder ->
+                                                (listOf("General", "Personal", "Work", "Study", "Shopping") + customBookmarkFolders).distinct().forEach { folder ->
                                                     DropdownMenuItem(text = { Text(if (item.folder == folder) "✓ $folder" else folder) }, onClick = {
                                                         val index = bookmarks.indexOfFirst { it.url == item.url }
                                                         if (index >= 0) bookmarks[index] = bookmarks[index].copy(folder = folder)
@@ -1068,13 +1072,42 @@ private fun SudhaBrowserApp(context: Context) {
                         TextButton(onClick = {
                             val index = bookmarks.indexOfFirst { it.url == bookmarkEditUrl }
                             if (index >= 0 && bookmarkEditTitle.isNotBlank()) {
-                                bookmarks[index] = SavedPage(bookmarkEditTitle.trim(), bookmarkEditUrl)
+                                bookmarks[index] = bookmarks[index].copy(title = bookmarkEditTitle.trim())
                                 persist("bookmarks", bookmarks)
                             }
                             showBookmarkEditDialog = false
                         }) { Text("Save") }
                     },
                     dismissButton = { TextButton(onClick = { showBookmarkEditDialog = false }) { Text("Cancel") } }
+                )
+            }
+            if (showCreateBookmarkFolderDialog) {
+                AlertDialog(
+                    onDismissRequest = { showCreateBookmarkFolderDialog = false },
+                    title = { Text("Create bookmark folder") },
+                    text = {
+                        OutlinedTextField(
+                            value = newBookmarkFolderName,
+                            onValueChange = { newBookmarkFolderName = it },
+                            singleLine = true,
+                            label = { Text("Folder name") },
+                            placeholder = { Text("e.g. Finance, Travel") }
+                        )
+                    },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            val name = newBookmarkFolderName.trim().take(30)
+                            if (name.isNotBlank() && name.lowercase() != "all" && name.lowercase() != "general" &&
+                                customBookmarkFolders.none { it.equals(name, true) } &&
+                                bookmarks.none { it.folder.equals(name, true) }) {
+                                customBookmarkFolders.add(name)
+                                prefs.edit().putStringSet("bookmark_folders", customBookmarkFolders.toSet()).apply()
+                                selectedBookmarkFolder = name
+                            }
+                            showCreateBookmarkFolderDialog = false
+                        }, enabled = newBookmarkFolderName.trim().isNotBlank()) { Text("Create") }
+                    },
+                    dismissButton = { TextButton(onClick = { showCreateBookmarkFolderDialog = false }) { Text("Cancel") } }
                 )
             }
             if (showImportBookmarksDialog) {
