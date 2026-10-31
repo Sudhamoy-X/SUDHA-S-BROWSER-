@@ -967,6 +967,7 @@ private fun SudhaBrowserApp(context: Context) {
                                 }
                             }
                         }
+                    }
                     "bookmarks", "history" -> {
                         val baseList = if (screen == "bookmarks") bookmarks.toList() else history.toList()
                         val filteredList = baseList.filter { (screen != "bookmarks" || selectedBookmarkFolder == "All" || it.folder == selectedBookmarkFolder) && (savedSearch.isBlank() || it.title.contains(savedSearch, true) || it.url.contains(savedSearch, true)) }
