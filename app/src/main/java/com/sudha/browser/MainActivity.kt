@@ -397,108 +397,6 @@ private fun SudhaBrowserApp(context: Context) {
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go), keyboardActions = KeyboardActions(onGo = { navigate(address) }))
                     IconButton(onClick = { navigate(address) }, modifier = Modifier.size(36.dp)) { Icon(Icons.Default.ArrowForward, "Go", tint = Cyan, modifier = Modifier.size(20.dp)) }
                 }
-                if (!showHomeDashboard) {
-                    Row(
-                        Modifier.fillMaxWidth().height(40.dp).padding(horizontal = 6.dp),
-                        horizontalArrangement = Arrangement.SpaceEvenly,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        IconButton(onClick = { activeTab.webView?.goBack() }, enabled = activeTab.webView?.canGoBack() == true, modifier = Modifier.size(36.dp)) {
-                            Icon(Icons.Default.ArrowBack, "Back", tint = if (activeTab.webView?.canGoBack() == true) Color.White else Color.Gray, modifier = Modifier.size(20.dp))
-                        }
-                        IconButton(onClick = { activeTab.webView?.goForward() }, enabled = activeTab.webView?.canGoForward() == true, modifier = Modifier.size(40.dp)) {
-                            Icon(Icons.Default.ArrowForward, "Forward", tint = if (activeTab.webView?.canGoForward() == true) Color.White else Color.Gray, modifier = Modifier.size(21.dp))
-                        }
-                        IconButton(onClick = { if (progress in 1..99) activeTab.webView?.stopLoading() else activeTab.webView?.reload() }, modifier = Modifier.size(40.dp)) {
-                            Icon(if (progress in 1..99) Icons.Default.Close else Icons.Default.Refresh, "Reload", tint = Cyan, modifier = Modifier.size(22.dp))
-                        }
-                        IconButton(onClick = { saveBookmark() }, modifier = Modifier.size(40.dp)) { Icon(Icons.Default.Bookmark, "Bookmark", tint = Cyan, modifier = Modifier.size(21.dp)) }
-                        IconButton(onClick = { screen = "tabs" }, modifier = Modifier.size(40.dp)) {
-                            BadgedBox(badge = { Badge { Text(tabs.size.toString()) } }) { Icon(Icons.Default.Tab, "Tabs", tint = Color.White, modifier = Modifier.size(21.dp)) }
-                        }
-                        Box {
-                            IconButton(onClick = { showPageTools = true }, modifier = Modifier.size(40.dp)) { Icon(Icons.Default.MoreVert, "Page menu", tint = Cyan, modifier = Modifier.size(21.dp)) }
-                            DropdownMenu(expanded = showPageTools, onDismissRequest = { showPageTools = false }) {
-                                DropdownMenuItem(text = { Text("Share page") }, onClick = {
-                                    showPageTools = false
-                                    if (activeTab.url.isNotBlank()) runCatching { context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, activeTab.url), "Share page")) }
-                                })
-                                DropdownMenuItem(text = { Text("Find in page") }, onClick = { showPageTools = false; showFindBar = true; findText = "" })
-                                DropdownMenuItem(text = { Text("Copy page link") }, onClick = {
-                                    showPageTools = false
-                                    if (activeTab.url.isNotBlank()) (context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("Page URL", activeTab.url))
-                                })
-                                DropdownMenuItem(text = { Text("New tab") }, onClick = { showPageTools = false; addTab() })
-                                DropdownMenuItem(text = { Text("Home") }, onClick = { showPageTools = false; showHomeDashboard = true; address = "" })
-                                DropdownMenuItem(text = { Text("Translate page to English") }, onClick = {
-                                    showPageTools = false
-                                    if (activeTab.url.startsWith("http")) navigate("https://translate.google.com/translate?sl=auto&tl=en&u=" + Uri.encode(activeTab.url))
-                                })
-                                DropdownMenuItem(text = { Text("Page information") }, onClick = {
-                                    showPageTools = false
-                                    val uri = Uri.parse(activeTab.url)
-                                    pageInfoText = "Title: ${activeTab.title}\nAddress: ${activeTab.url}\nDomain: ${uri.host ?: "Unknown"}\nScheme: ${uri.scheme ?: "Unknown"}"
-                                    showPageInfoDialog = true
-                                })
-                                DropdownMenuItem(text = { Text("Copy page title") }, onClick = {
-                                    showPageTools = false
-                                    (context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("Page title", activeTab.title))
-                                })
-                                DropdownMenuItem(text = { Text("Copy visible page text") }, onClick = {
-                                    showPageTools = false
-                                    activeTab.webView?.evaluateJavascript("(function(){return document.body ? document.body.innerText : '';})()") { raw ->
-                                        val value = runCatching { org.json.JSONTokener(raw).nextValue() as? String }.getOrNull().orEmpty()
-                                        if (value.isNotBlank()) (context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("Page text", value))
-                                    }
-                                })
-                                DropdownMenuItem(text = { Text("Share visible page text") }, onClick = {
-                                    showPageTools = false
-                                    activeTab.webView?.evaluateJavascript("(function(){return document.body ? document.body.innerText : '';})()") { raw ->
-                                        val value = runCatching { org.json.JSONTokener(raw).nextValue() as? String }.getOrNull().orEmpty()
-                                        if (value.isNotBlank()) runCatching { context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, value.take(12000)), "Share page text")) }
-                                    }
-                                })
-                                DropdownMenuItem(text = { Text("Save offline page copy") }, onClick = {
-                                    showPageTools = false
-                                    val folder = File(context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS), "OfflinePages")
-                                    folder.mkdirs()
-                                    val fileName = "page_${System.currentTimeMillis()}.mht"
-                                    activeTab.webView?.saveWebArchive(File(folder, fileName).absolutePath, false) { saved ->
-                                        android.widget.Toast.makeText(context, if (saved.isNullOrBlank()) "Could not save offline copy" else "Offline copy saved in app Documents", android.widget.Toast.LENGTH_LONG).show()
-                                    }
-                                })
-                                DropdownMenuItem(text = { Text("Clear page cache and reload") }, onClick = {
-                                    showPageTools = false
-                                    activeTab.webView?.apply { clearCache(false); reload() }
-                                })
-                                DropdownMenuItem(text = { Text("Open in another browser") }, onClick = {
-                                    showPageTools = false
-                                    if (activeTab.url.startsWith("http")) runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(activeTab.url))) }
-                                })
-                                DropdownMenuItem(text = { Text("Open page source") }, onClick = {
-                                    showPageTools = false
-                                    if (activeTab.url.startsWith("http")) {
-                                        val sourceUrl = "view-source:" + activeTab.url
-                                        val sourceTab = BrowserTab(nextTabId++, sourceUrl, "Page source")
-                                        tabs.add(sourceTab); activeTabId = sourceTab.id; address = sourceUrl; showHomeDashboard = false; persistSession()
-                                    }
-                                })
-                                DropdownMenuItem(text = { Text("Copy website domain") }, onClick = {
-                                    showPageTools = false
-                                    val domain = Uri.parse(activeTab.url).host.orEmpty()
-                                    if (domain.isNotBlank()) (context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("Website domain", domain))
-                                })
-                            }
-                        }
-                    }
-                }
-                if (!showHomeDashboard && showFindBar) Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-                    TextField(value = findText, onValueChange = { findText = it; activeTab.webView?.findAllAsync(it) }, modifier = Modifier.weight(1f), placeholder = { Text("Find on page") }, singleLine = true)
-                    TextButton(onClick = { activeTab.webView?.findAllAsync(findText); activeTab.webView?.findNext(true) }) { Text("Find") }
-                    TextButton(onClick = { activeTab.webView?.findNext(true) }) { Text("Next") }
-                    TextButton(onClick = { activeTab.webView?.clearMatches(); showFindBar = false; findText = "" }) { Text("Close") }
-                }
-                if (!showHomeDashboard && progress in 1..99) LinearProgressIndicator(progress = { progress / 100f }, modifier = Modifier.fillMaxWidth().height(2.dp), color = ElectricBlue, trackColor = Midnight)
                 if (showHomeDashboard) {
                     Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(androidx.compose.foundation.rememberScrollState()).padding(horizontal = 18.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                         Spacer(Modifier.height(18.dp))
@@ -637,6 +535,57 @@ private fun SudhaBrowserApp(context: Context) {
                         }
                     }, update = { view: WebView -> if (view.url != activeTab.url && activeTab.url.isNotBlank()) view.loadUrl(activeTab.url) })
                 }
+                }
+                if (!showHomeDashboard) {
+                    Row(
+                        Modifier.fillMaxWidth()
+                            .navigationBarsPadding()
+                            .height(58.dp)
+                            .background(Color(0xFF0D1422))
+                            .border(width = 0.5.dp, color = Color(0xFF26364D)),
+                        horizontalArrangement = Arrangement.SpaceEvenly,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        IconButton(onClick = { activeTab.webView?.goBack() }, enabled = activeTab.webView?.canGoBack() == true) {
+                            Icon(Icons.Default.ArrowBack, "Back", tint = if (activeTab.webView?.canGoBack() == true) Color.White else Color(0xFF657184), modifier = Modifier.size(22.dp))
+                        }
+                        IconButton(onClick = { activeTab.webView?.goForward() }, enabled = activeTab.webView?.canGoForward() == true) {
+                            Icon(Icons.Default.ArrowForward, "Forward", tint = if (activeTab.webView?.canGoForward() == true) Color.White else Color(0xFF657184), modifier = Modifier.size(22.dp))
+                        }
+                        IconButton(onClick = { showHomeDashboard = true; address = "" }) {
+                            Icon(Icons.Default.Home, "Home", tint = Color.White, modifier = Modifier.size(22.dp))
+                        }
+                        IconButton(onClick = { if (progress in 1..99) activeTab.webView?.stopLoading() else activeTab.webView?.reload() }) {
+                            Icon(if (progress in 1..99) Icons.Default.Close else Icons.Default.Refresh, "Reload", tint = Cyan, modifier = Modifier.size(22.dp))
+                        }
+                        IconButton(onClick = { screen = "tabs" }) {
+                            BadgedBox(badge = { Badge { Text(tabs.size.toString()) } }) {
+                                Icon(Icons.Default.Tab, "Tabs", tint = Color.White, modifier = Modifier.size(22.dp))
+                            }
+                        }
+                        Box {
+                            IconButton(onClick = { showPageTools = true }) {
+                                Icon(Icons.Default.MoreVert, "More options", tint = Color.White, modifier = Modifier.size(22.dp))
+                            }
+                            DropdownMenu(expanded = showPageTools, onDismissRequest = { showPageTools = false }) {
+                                DropdownMenuItem(text = { Text("Bookmark page") }, onClick = { showPageTools = false; saveBookmark() })
+                                DropdownMenuItem(text = { Text("Find in page") }, onClick = { showPageTools = false; showFindBar = true; findText = "" })
+                                DropdownMenuItem(text = { Text("Share page") }, onClick = {
+                                    showPageTools = false
+                                    if (activeTab.url.isNotBlank()) runCatching { context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, activeTab.url), "Share page")) }
+                                })
+                                DropdownMenuItem(text = { Text("Copy page link") }, onClick = {
+                                    showPageTools = false
+                                    if (activeTab.url.isNotBlank()) (context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("Page URL", activeTab.url))
+                                })
+                                DropdownMenuItem(text = { Text("New tab") }, onClick = { showPageTools = false; addTab() })
+                                DropdownMenuItem(text = { Text("Translate page to English") }, onClick = {
+                                    showPageTools = false
+                                    if (activeTab.url.startsWith("http")) navigate("https://translate.google.com/translate?sl=auto&tl=en&u=" + Uri.encode(activeTab.url))
+                                })
+                            }
+                        }
+                    }
                 }
             } else {
                 val heading = when (screen) { "tabs" -> "Your tabs"; "bookmarks" -> "Bookmarks"; "history" -> "History"; "settings" -> "Privacy & settings"; else -> "Downloads" }
