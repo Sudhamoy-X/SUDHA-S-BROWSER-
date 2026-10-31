@@ -870,7 +870,13 @@ private fun SudhaBrowserApp(context: Context) {
                             items(list.toList()) { item ->
                                 Row(Modifier.fillMaxWidth().background(SurfaceBlue, RoundedCornerShape(14.dp)).clickable { openSaved(item) }.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
                                     Column(Modifier.weight(1f)) { Text(item.title, color = Color.White, maxLines = 1); Text(item.url, color = Color.LightGray, maxLines = 1, style = MaterialTheme.typography.bodySmall) }
-                                    if (screen == "bookmarks") IconButton(onClick = { bookmarks.remove(item); persist("bookmarks", bookmarks) }) { Icon(Icons.Default.Delete, "Delete bookmark", tint = Color.LightGray) }
+                                    if (screen == "bookmarks") {
+                                        IconButton(onClick = { bookmarkEditUrl = item.url; bookmarkEditTitle = item.title; showBookmarkEditDialog = true }) { Icon(Icons.Default.Settings, "Edit bookmark", tint = Cyan) }
+                                        IconButton(onClick = { runCatching { context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, item.url), "Share bookmark")) } }) { Icon(Icons.Default.Share, "Share bookmark", tint = Color.LightGray) }
+                                        IconButton(onClick = { bookmarks.remove(item); persist("bookmarks", bookmarks) }) { Icon(Icons.Default.Delete, "Delete bookmark", tint = Color.LightGray) }
+                                    } else {
+                                        IconButton(onClick = { history.remove(item); persist("history", history) }) { Icon(Icons.Default.Delete, "Delete history item", tint = Color.LightGray) }
+                                    }
                                 }
                             }
                         }
