@@ -36,6 +36,8 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.FindInPage
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
@@ -87,6 +89,11 @@ private fun SudhaBrowserApp(context: Context) {
     var trackingEnabled by remember { mutableStateOf(prefs.getBoolean("block_trackers", true)) }
     var desktopMode by remember { mutableStateOf(prefs.getBoolean("desktop_mode", false)) }
     var showClearDataDialog by remember { mutableStateOf(false) }
+    var searchEngine by remember { mutableStateOf(prefs.getString("search_engine", "Google") ?: "Google") }
+    var showSearchEngines by remember { mutableStateOf(false) }
+    var textZoom by remember { mutableIntStateOf(prefs.getInt("text_zoom", 100).coerceIn(75, 200)) }
+    var showFindBar by remember { mutableStateOf(false) }
+    var findText by remember { mutableStateOf("") }
     BrowserContentFilter.adsEnabled = adsEnabled
     BrowserContentFilter.trackingEnabled = trackingEnabled
     var downloads by remember { mutableStateOf<List<DownloadEntry>>(emptyList()) }
@@ -139,7 +146,7 @@ private fun SudhaBrowserApp(context: Context) {
         if (value.isBlank()) return
         val target = when {
             value.startsWith("https://") || value.startsWith("http://") -> value
-            value.contains(" ") || !value.contains(".") -> "https://www.google.com/search?q=" + Uri.encode(value)
+            value.contains(" ") || !value.contains(".") -> (when (searchEngine) { "Bing" -> "https://www.bing.com/search?q="; "DuckDuckGo" -> "https://duckduckgo.com/?q="; "Brave" -> "https://search.brave.com/search?q="; else -> "https://www.google.com/search?q=" }) + Uri.encode(value)
             else -> "https://$value"
         }
         activeTab.url = target; activeTab.title = target; address = target; screen = "browser"
@@ -170,6 +177,8 @@ private fun SudhaBrowserApp(context: Context) {
                 Spacer(Modifier.width(10.dp))
                 Column(Modifier.weight(1f)) { Text("SUDHA BROWSER", color = Color.White, style = MaterialTheme.typography.titleMedium); Text("Your Web. Your Way.", color = Cyan, style = MaterialTheme.typography.labelSmall) }
                 IconButton(onClick = { saveBookmark() }) { Icon(Icons.Default.Bookmark, "Bookmark page", tint = Color.White) }
+                IconButton(onClick = { showFindBar = !showFindBar; findText = "" }) { Icon(Icons.Default.FindInPage, "Find in page", tint = Color.White) }
+                IconButton(onClick = { val url = activeTab.url; if (url.isNotBlank()) runCatching { context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, url), "Share page")) } }) { Icon(Icons.Default.Share, "Share page", tint = Color.White) }
                 IconButton(onClick = { activeTab.webView?.reload() }) { Icon(Icons.Default.Refresh, "Reload", tint = Color.White) }
                 IconButton(onClick = { screen = "settings" }) { Icon(Icons.Default.Settings, "Settings", tint = Color.White) }
                 IconButton(onClick = { screen = "tabs" }) { BadgedBox(badge = { Badge { Text(tabs.size.toString()) } }) { Icon(Icons.Default.Tab, "Tabs", tint = Color.White) } }
@@ -182,6 +191,11 @@ private fun SudhaBrowserApp(context: Context) {
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go), keyboardActions = KeyboardActions(onGo = { navigate(address) }))
                     IconButton(onClick = { navigate(address) }) { Icon(Icons.Default.ArrowForward, "Go", tint = Cyan) }
                 }
+                if (showFindBar) Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    TextField(value = findText, onValueChange = { findText = it; activeTab.webView?.findAllAsync(it) }, modifier = Modifier.weight(1f), placeholder = { Text("Find on page") }, singleLine = true)
+                    TextButton(onClick = { activeTab.webView?.findAllAsync(findText) }) { Text("Find") }
+                    TextButton(onClick = { activeTab.webView?.clearMatches(); showFindBar = false; findText = "" }) { Text("Close") }
+                }
                 if (progress in 1..99) LinearProgressIndicator(progress = { progress / 100f }, modifier = Modifier.fillMaxWidth().height(2.dp), color = ElectricBlue, trackColor = Midnight)
                 key(activeTab.id) {
                     AndroidView(
@@ -189,6 +203,7 @@ private fun SudhaBrowserApp(context: Context) {
                         factory = { ctx: Context ->
                         (activeTab.webView ?: WebView(ctx).also { activeTab.webView = it }).apply {
                             settings.javaScriptEnabled = true; settings.domStorageEnabled = true; settings.loadsImagesAutomatically = true; settings.javaScriptCanOpenWindowsAutomatically = false
+                            settings.textZoom = textZoom
                             settings.userAgentString = if (desktopMode) "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36" else android.webkit.WebSettings.getDefaultUserAgent(ctx)
                             setDownloadListener { url, userAgent, contentDisposition, mimeType, _ ->
                                 val request = DownloadManager.Request(Uri.parse(url)).apply {
@@ -270,6 +285,24 @@ private fun SudhaBrowserApp(context: Context) {
                                     webView.reload()
                                 }
                             })
+                        }
+                        HorizontalDivider(color = Color(0xFF29364B))
+                        Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text("Search engine", color = Color.White, style = MaterialTheme.typography.titleMedium)
+                            Text("Choose the provider used for address-bar searches.", color = Color.LightGray, style = MaterialTheme.typography.bodySmall)
+                            Box {
+                                OutlinedButton(onClick = { showSearchEngines = true }, modifier = Modifier.fillMaxWidth()) { Text(searchEngine); Spacer(Modifier.weight(1f)); Text("Change") }
+                                DropdownMenu(expanded = showSearchEngines, onDismissRequest = { showSearchEngines = false }) {
+                                    listOf("Google", "Bing", "DuckDuckGo", "Brave").forEach { engine -> DropdownMenuItem(text = { Text(engine) }, onClick = { searchEngine = engine; prefs.edit().putString("search_engine", engine).apply(); showSearchEngines = false }) }
+                                }
+                            }
+                        }
+                        HorizontalDivider(color = Color(0xFF29364B))
+                        Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text("Website text size", color = Color.White, style = MaterialTheme.typography.titleMedium)
+                            Text("$textZoom%", color = Cyan, style = MaterialTheme.typography.labelLarge)
+                            Slider(value = textZoom.toFloat(), onValueChange = { textZoom = it.toInt().coerceIn(75, 200) }, valueRange = 75f..200f, onValueChangeFinished = { prefs.edit().putInt("text_zoom", textZoom).apply(); tabs.forEach { it.webView?.settings?.textZoom = textZoom } })
+                            Text("Adjust webpage text without changing image or layout zoom.", color = Color.LightGray, style = MaterialTheme.typography.bodySmall)
                         }
                         HorizontalDivider(color = Color(0xFF29364B))
                         Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
