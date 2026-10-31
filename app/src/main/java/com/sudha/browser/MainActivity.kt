@@ -28,7 +28,14 @@ import android.webkit.WebViewClient
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.border
 import androidx.compose.foundation.background
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -77,6 +84,27 @@ private data class DownloadEntry(val id: Long, val title: String, val status: St
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) { super.onCreate(savedInstanceState); setContent { SudhaBrowserApp(this) } }
+}
+
+
+@Composable
+private fun SudhaBrandMark(modifier: Modifier = Modifier) {
+    val transition = rememberInfiniteTransition(label = "sudha-logo")
+    val glow by transition.animateFloat(
+        initialValue = 0.72f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(1800), repeatMode = RepeatMode.Reverse),
+        label = "logo-glow"
+    )
+    Box(
+        modifier.graphicsLayer { scaleX = 0.98f + glow * 0.02f; scaleY = 0.98f + glow * 0.02f }
+            .background(Brush.linearGradient(listOf(Color(0xFF19DFFF), Color(0xFF315CFF), Color(0xFF9B42FF))), RoundedCornerShape(19.dp))
+            .padding(2.dp)
+            .background(Brush.linearGradient(listOf(Color(0xFF07152F), Color(0xFF15104A), Color(0xFF071B38))), RoundedCornerShape(17.dp)),
+        contentAlignment = Alignment.Center
+    ) {
+        Text("S", color = Color.White, style = MaterialTheme.typography.headlineLarge, fontWeight = androidx.compose.ui.text.font.FontWeight.Light)
+    }
 }
 
 @SuppressLint("SetJavaScriptEnabled")
@@ -189,23 +217,10 @@ private fun SudhaBrowserApp(context: Context) {
     }
 
     MaterialTheme(colorScheme = darkColorScheme(primary = ElectricBlue, secondary = Cyan, background = Midnight, surface = SurfaceBlue)) {
-        Column(Modifier.fillMaxSize().background(Midnight).statusBarsPadding()) {
+        Column(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFF050A18), Color(0xFF08152C), Color(0xFF050914)))).statusBarsPadding()) {
             Column(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 8.dp)) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        Modifier.size(52.dp).background(
-                            Brush.linearGradient(listOf(Color(0xFF24D9FF), Color(0xFF245CFF), Color(0xFF713BFF), Color(0xFF20D9F2))),
-                            CircleShape
-                        ).padding(2.dp).background(
-                            Brush.linearGradient(listOf(Color(0xFF182B65), Color(0xFF5125C8), Color(0xFF087EBD))),
-                            CircleShape
-                        ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Box(Modifier.size(39.dp).background(Brush.linearGradient(listOf(Color(0xFF765BFF), Color(0xFF263DCA), Color(0xFF16C8E8))), CircleShape), contentAlignment = Alignment.Center) {
-                            Text("S", color = Color.White, style = MaterialTheme.typography.headlineLarge)
-                        }
-                    }
+                    SudhaBrandMark(Modifier.size(54.dp))
                     Spacer(Modifier.width(10.dp))
                     Column(Modifier.weight(1f)) {
                         Text("SUDHA BROWSER", color = Color.White, style = MaterialTheme.typography.titleMedium, maxLines = 1, softWrap = false)
@@ -230,9 +245,16 @@ private fun SudhaBrowserApp(context: Context) {
                     IconButton(onClick = { navigate(address) }) { Icon(Icons.Default.ArrowForward, "Go", tint = Cyan) }
                 }
                 if (prefs.getBoolean("show_shortcuts", true)) {
-                    Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        listOf("Google" to "https://www.google.com", "YouTube" to "https://m.youtube.com", "Gmail" to "https://mail.google.com", "Maps" to "https://maps.google.com").forEach { (label, link) ->
-                            Text(label, color = Cyan, style = MaterialTheme.typography.labelMedium, modifier = Modifier.background(SurfaceBlue, RoundedCornerShape(18.dp)).clickable { navigate(link) }.padding(horizontal = 12.dp, vertical = 9.dp))
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                        listOf("Google" to "https://www.google.com", "YouTube" to "https://m.youtube.com", "Gmail" to "https://mail.google.com", "Maps" to "https://maps.google.com").forEachIndexed { index, item ->
+                            val tint = listOf(Color(0xFF55B7FF), Color(0xFFFF5577), Color(0xFFFF657D), Color(0xFF55D6B0))[index]
+                            Column(Modifier.weight(1f).background(Brush.verticalGradient(listOf(Color(0xFF142541), Color(0xFF0B1426))), RoundedCornerShape(18.dp)).border(1.dp, Color(0xFF294B7A), RoundedCornerShape(18.dp)).clickable { navigate(item.second) }.padding(vertical = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                                Box(Modifier.size(34.dp).background(tint.copy(alpha = 0.14f), CircleShape), contentAlignment = Alignment.Center) {
+                                    Text(item.first.take(1), color = tint, style = MaterialTheme.typography.titleMedium)
+                                }
+                                Spacer(Modifier.height(5.dp))
+                                Text(item.first, color = Color(0xFFD7E8FF), style = MaterialTheme.typography.labelSmall, maxLines = 1)
+                            }
                         }
                     }
                 }
@@ -582,7 +604,7 @@ private fun SudhaBrowserApp(context: Context) {
                     dismissButton = { TextButton(onClick = { showClearDataDialog = false }) { Text("Cancel") } }
                 )
             }
-            Row(Modifier.fillMaxWidth().navigationBarsPadding().background(SurfaceBlue).padding(horizontal = 8.dp, vertical = 6.dp), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.fillMaxWidth().navigationBarsPadding().background(Brush.verticalGradient(listOf(Color(0xFF101D35), Color(0xFF080F20)))).border(1.dp, Color(0xFF1D3B66)).padding(horizontal = 4.dp, vertical = 5.dp), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
                 NavigationBarItem(selected = screen == "browser", onClick = { screen = "browser" }, icon = { Icon(Icons.Default.Home, null) }, label = { Text("Home") })
                 NavigationBarItem(selected = screen == "bookmarks", onClick = { screen = "bookmarks" }, icon = { Icon(Icons.Default.Bookmark, null) }, label = { Text("Saved") })
                 NavigationBarItem(selected = screen == "history", onClick = { screen = "history" }, icon = { Icon(Icons.Default.History, null) }, label = { Text("History") })
