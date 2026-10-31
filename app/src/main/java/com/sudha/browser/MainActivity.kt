@@ -76,6 +76,8 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import org.json.JSONArray
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.unit.sp
 import org.json.JSONObject
 
 private val Midnight = Color(0xFF080B14)
