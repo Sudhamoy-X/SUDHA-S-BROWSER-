@@ -265,6 +265,14 @@ private fun SudhaBrowserApp(context: Context) {
                     "settings" -> Column(Modifier.weight(1f).fillMaxWidth().padding(horizontal = 18.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
                         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                             Column(Modifier.weight(1f)) {
+                                Text("Homepage shortcuts", color = Color.White, style = MaterialTheme.typography.titleMedium)
+                                Text("Show quick links below the address bar", color = Color.LightGray, style = MaterialTheme.typography.bodySmall)
+                            }
+                            Switch(checked = prefs.getBoolean("show_shortcuts", true), onCheckedChange = { prefs.edit().putBoolean("show_shortcuts", it).apply() })
+                        }
+                        HorizontalDivider(color = Color(0xFF29364B))
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f)) {
                                 Text("Block advertisements", color = Color.White, style = MaterialTheme.typography.titleMedium)
                                 Text("Blocks requests to known advertising domains", color = Color.LightGray, style = MaterialTheme.typography.bodySmall)
                             }
