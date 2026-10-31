@@ -46,6 +46,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -422,6 +423,23 @@ private fun SudhaBrowserApp(context: Context) {
                             if (gestureNavigationEnabled) {
                                 var drag = 0f
                                 detectHorizontalDragGestures(onHorizontalDrag = { change, amount -> change.consume(); drag += amount }, onDragEnd = { if (drag > 90f) activeTab.webView?.goBack() else if (drag < -90f) activeTab.webView?.goForward(); drag = 0f })
+                            }
+                        }.pointerInput(activeTab.id, volumeGestureEnabled) {
+                            if (volumeGestureEnabled) {
+                                val audio = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+                                var accumulated = 0f
+                                detectDragGestures(onDragStart = { accumulated = 0f }, onDrag = { change, amount ->
+                                    if (change.position.x >= size.width * 0.88f && kotlin.math.abs(amount.y) > kotlin.math.abs(amount.x)) {
+                                        change.consume()
+                                        accumulated += amount.y
+                                        if (kotlin.math.abs(accumulated) >= 24f) {
+                                            val step = if (accumulated < 0f) 1 else -1
+                                            val current = audio.getStreamVolume(AudioManager.STREAM_MUSIC)
+                                            audio.setStreamVolume(AudioManager.STREAM_MUSIC, (current + step).coerceIn(0, audio.getStreamMaxVolume(AudioManager.STREAM_MUSIC)), 0)
+                                            accumulated = 0f
+                                        }
+                                    }
+                                })
                             }
                         },
                         factory = { ctx: Context ->
