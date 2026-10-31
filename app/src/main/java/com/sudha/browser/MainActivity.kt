@@ -98,6 +98,10 @@ private fun SudhaBrowserApp(context: Context) {
     var textZoom by remember { mutableIntStateOf(prefs.getInt("text_zoom", 100).coerceIn(75, 200)) }
     var showFindBar by remember { mutableStateOf(false) }
     var readerMode by remember { mutableStateOf(false) }
+    var javaScriptEnabled by remember { mutableStateOf(prefs.getBoolean("javascript_enabled", true)) }
+    var imagesEnabled by remember { mutableStateOf(prefs.getBoolean("images_enabled", true)) }
+    var cookiesEnabled by remember { mutableStateOf(prefs.getBoolean("cookies_enabled", true)) }
+    var safeBrowsingEnabled by remember { mutableStateOf(prefs.getBoolean("safe_browsing", true)) }
     var findText by remember { mutableStateOf("") }
     BrowserContentFilter.adsEnabled = adsEnabled
     BrowserContentFilter.trackingEnabled = trackingEnabled
@@ -215,7 +219,10 @@ private fun SudhaBrowserApp(context: Context) {
                         modifier = Modifier.weight(1f).fillMaxWidth(),
                         factory = { ctx: Context ->
                         (activeTab.webView ?: WebView(ctx).also { activeTab.webView = it }).apply {
-                            settings.javaScriptEnabled = true; settings.domStorageEnabled = true; settings.loadsImagesAutomatically = true; settings.javaScriptCanOpenWindowsAutomatically = false
+                            settings.javaScriptEnabled = javaScriptEnabled; settings.domStorageEnabled = true; settings.loadsImagesAutomatically = imagesEnabled; settings.javaScriptCanOpenWindowsAutomatically = false
+                            settings.safeBrowsingEnabled = safeBrowsingEnabled
+                            CookieManager.getInstance().setAcceptCookie(cookiesEnabled)
+                            CookieManager.getInstance().setAcceptThirdPartyCookies(this, false)
                             settings.textZoom = textZoom
                             settings.setSupportZoom(true); settings.builtInZoomControls = true; settings.displayZoomControls = false
                             settings.userAgentString = if (desktopMode) "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36" else android.webkit.WebSettings.getDefaultUserAgent(ctx)
@@ -263,6 +270,26 @@ private fun SudhaBrowserApp(context: Context) {
                 }
                 when (screen) {
                     "settings" -> Column(Modifier.weight(1f).fillMaxWidth().padding(horizontal = 18.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f)) { Text("JavaScript", color = Color.White, style = MaterialTheme.typography.titleMedium); Text("Some websites require JavaScript to work", color = Color.LightGray, style = MaterialTheme.typography.bodySmall) }
+                            Switch(checked = javaScriptEnabled, onCheckedChange = { javaScriptEnabled = it; prefs.edit().putBoolean("javascript_enabled", it).apply(); tabs.forEach { tab -> tab.webView?.settings?.javaScriptEnabled = it } })
+                        }
+                        HorizontalDivider(color = Color(0xFF29364B))
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f)) { Text("Load images", color = Color.White, style = MaterialTheme.typography.titleMedium); Text("Turn off to reduce image data usage", color = Color.LightGray, style = MaterialTheme.typography.bodySmall) }
+                            Switch(checked = imagesEnabled, onCheckedChange = { imagesEnabled = it; prefs.edit().putBoolean("images_enabled", it).apply(); tabs.forEach { tab -> tab.webView?.settings?.loadsImagesAutomatically = it } })
+                        }
+                        HorizontalDivider(color = Color(0xFF29364B))
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f)) { Text("Website cookies", color = Color.White, style = MaterialTheme.typography.titleMedium); Text("Disabling cookies may sign you out of websites", color = Color.LightGray, style = MaterialTheme.typography.bodySmall) }
+                            Switch(checked = cookiesEnabled, onCheckedChange = { cookiesEnabled = it; prefs.edit().putBoolean("cookies_enabled", it).apply(); CookieManager.getInstance().setAcceptCookie(it); tabs.forEach { tab -> tab.webView?.let { web -> CookieManager.getInstance().setAcceptThirdPartyCookies(web, false) } } })
+                        }
+                        HorizontalDivider(color = Color(0xFF29364B))
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f)) { Text("Safe Browsing", color = Color.White, style = MaterialTheme.typography.titleMedium); Text("Use Android WebView's known harmful-site protection", color = Color.LightGray, style = MaterialTheme.typography.bodySmall) }
+                            Switch(checked = safeBrowsingEnabled, onCheckedChange = { safeBrowsingEnabled = it; prefs.edit().putBoolean("safe_browsing", it).apply(); tabs.forEach { tab -> tab.webView?.settings?.safeBrowsingEnabled = it } })
+                        }
+                        HorizontalDivider(color = Color(0xFF29364B))
                         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                             Column(Modifier.weight(1f)) {
                                 Text("Homepage shortcuts", color = Color.White, style = MaterialTheme.typography.titleMedium)
