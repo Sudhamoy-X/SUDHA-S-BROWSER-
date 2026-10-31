@@ -414,44 +414,61 @@ private fun SudhaBrowserApp(context: Context) {
                     IconButton(onClick = { navigate(address) }, modifier = Modifier.size(36.dp)) { Icon(Icons.Default.ArrowForward, "Go", tint = Cyan, modifier = Modifier.size(20.dp)) }
                 }
                 if (showHomeDashboard) {
-                    Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(androidx.compose.foundation.rememberScrollState()).padding(horizontal = 18.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                        Spacer(Modifier.height(18.dp))
-                        SudhaBrandMark(Modifier.size(88.dp))
-                        Spacer(Modifier.height(10.dp))
-                        Text("SUDHA", color = Color.White, style = MaterialTheme.typography.headlineLarge, letterSpacing = 8.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
-                        Text("B R O W S E R", color = Cyan, style = MaterialTheme.typography.labelMedium, letterSpacing = 5.sp)
-                        Spacer(Modifier.height(7.dp))
-                        Text("FASTER  •  SAFER  •  TOGETHER", color = Color(0xFF9AB9E4), style = MaterialTheme.typography.labelSmall, letterSpacing = 1.5.sp)
-                        Spacer(Modifier.height(16.dp))
-                        Row(Modifier.fillMaxWidth().background(Brush.horizontalGradient(listOf(Color(0xFF142747), Color(0xFF101A33))), RoundedCornerShape(22.dp)).border(1.dp, Color(0xFF28518A), RoundedCornerShape(22.dp)).padding(start = 14.dp, end = 6.dp, top = 5.dp, bottom = 5.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Search, null, tint = Cyan, modifier = Modifier.size(24.dp)); Spacer(Modifier.width(8.dp))
-                            TextField(value = address, onValueChange = { address = it }, modifier = Modifier.weight(1f), placeholder = { Text("Search or type URL", color = Color(0xFF9BAFCB)) }, singleLine = true, colors = TextFieldDefaults.colors(focusedTextColor = Color.White, unfocusedTextColor = Color.White, focusedContainerColor = Color.Transparent, unfocusedContainerColor = Color.Transparent, focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent, cursorColor = Cyan), keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go), keyboardActions = KeyboardActions(onGo = { navigate(address) }))
-                            IconButton(onClick = { navigate(address) }) { Icon(Icons.Default.ArrowForward, "Search", tint = Cyan) }
+                    Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(androidx.compose.foundation.rememberScrollState()).padding(horizontal = 18.dp), horizontalAlignment = Alignment.Start) {
+                        Spacer(Modifier.height(22.dp))
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            SudhaBrandMark(Modifier.size(54.dp))
+                            Spacer(Modifier.width(12.dp))
+                            Column(Modifier.weight(1f)) {
+                                Text("SUDHA", color = Color.White, style = MaterialTheme.typography.headlineMedium, letterSpacing = 5.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+                                Text("BROWSER", color = Cyan, style = MaterialTheme.typography.labelSmall, letterSpacing = 4.sp)
+                            }
+                            Box(Modifier.background(Color(0xFF102B2D), RoundedCornerShape(50)).border(1.dp, Color(0xFF24605A), RoundedCornerShape(50)).padding(horizontal = 11.dp, vertical = 7.dp)) {
+                                Text("READY TO BROWSE", color = Color(0xFF78E0C3), style = MaterialTheme.typography.labelSmall, letterSpacing = 0.6.sp)
+                            }
+                        }
+                        Spacer(Modifier.height(28.dp))
+                        Text("Explore without limits.", color = Color.White, style = MaterialTheme.typography.headlineSmall, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
+                        Text("Search the web or enter a website address", color = Color(0xFF91A7C5), style = MaterialTheme.typography.bodySmall)
+                        Spacer(Modifier.height(14.dp))
+                        Row(Modifier.fillMaxWidth().background(Brush.horizontalGradient(listOf(Color(0xFF1B3457), Color(0xFF101C32))), RoundedCornerShape(20.dp)).border(1.dp, Color(0xFF37649A), RoundedCornerShape(20.dp)).padding(start = 15.dp, end = 7.dp, top = 7.dp, bottom = 7.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Search, null, tint = Cyan, modifier = Modifier.size(23.dp))
+                            Spacer(Modifier.width(10.dp))
+                            TextField(value = address, onValueChange = { address = it }, modifier = Modifier.weight(1f), placeholder = { Text("Search Google or type URL", color = Color(0xFF9BAFCB), fontSize = 14.sp) }, singleLine = true, colors = TextFieldDefaults.colors(focusedTextColor = Color.White, unfocusedTextColor = Color.White, focusedContainerColor = Color.Transparent, unfocusedContainerColor = Color.Transparent, focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent, cursorColor = Cyan), keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go), keyboardActions = KeyboardActions(onGo = { navigate(address) }))
+                            IconButton(onClick = { navigate(address) }, modifier = Modifier.background(Cyan.copy(alpha = 0.14f), CircleShape)) { Icon(Icons.Default.ArrowForward, "Search", tint = Cyan) }
+                        }
+                        Spacer(Modifier.height(27.dp))
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f)) { Text("YOUR SHORTCUTS", color = Color.White, style = MaterialTheme.typography.titleSmall, letterSpacing = 1.4.sp); Text("Your everyday destinations", color = Color(0xFF8299B8), style = MaterialTheme.typography.labelSmall) }
+                            Text("EDIT IN SETTINGS", color = Color(0xFF6E9DD6), style = MaterialTheme.typography.labelSmall)
                         }
                         if (showShortcuts) {
-                            Spacer(Modifier.height(18.dp))
-                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                            Spacer(Modifier.height(12.dp))
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                                 listOf("Google" to "https://www.google.com", "YouTube" to "https://m.youtube.com", "Gmail" to "https://mail.google.com", "Maps" to "https://maps.google.com").forEachIndexed { index, item ->
                                     val tint = listOf(Color(0xFF55B7FF), Color(0xFFFF5577), Color(0xFFFF657D), Color(0xFF55D6B0))[index]
-                                    Column(Modifier.weight(1f).background(Brush.verticalGradient(listOf(Color(0xFF172B4A), Color(0xFF0A1428))), RoundedCornerShape(17.dp)).border(1.dp, Color(0xFF294B7A), RoundedCornerShape(17.dp)).clickable { navigate(item.second) }.padding(vertical = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                                        Box(Modifier.size(34.dp).background(tint.copy(alpha = 0.15f), CircleShape), contentAlignment = Alignment.Center) { Text(item.first.take(1), color = tint, style = MaterialTheme.typography.titleMedium) }
-                                        Spacer(Modifier.height(6.dp)); Text(item.first, color = Color(0xFFD7E8FF), style = MaterialTheme.typography.labelSmall, maxLines = 1)
+                                    Column(Modifier.weight(1f).background(Brush.verticalGradient(listOf(Color(0xFF1A2B45), Color(0xFF101A2B))), RoundedCornerShape(18.dp)).border(1.dp, Color(0xFF2A4263), RoundedCornerShape(18.dp)).clickable { navigate(item.second) }.padding(vertical = 15.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                                        Box(Modifier.size(39.dp).background(tint.copy(alpha = 0.14f), CircleShape), contentAlignment = Alignment.Center) { Text(item.first.take(1), color = tint, style = MaterialTheme.typography.titleLarge, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold) }
+                                        Spacer(Modifier.height(8.dp)); Text(item.first, color = Color(0xFFE0ECFC), style = MaterialTheme.typography.labelMedium, maxLines = 1)
                                     }
                                 }
                             }
                         }
-                        Spacer(Modifier.height(22.dp))
-                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) { Text("QUICK ACCESS", color = Color.White, style = MaterialTheme.typography.titleSmall, letterSpacing = 1.5.sp); Spacer(Modifier.weight(1f)); Text("Crafted by Sudhamoy", color = Color(0xFF7EA6D8), style = MaterialTheme.typography.labelSmall) }
-                        Spacer(Modifier.height(10.dp))
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
-                            listOf(Triple("Saved", "bookmarks", Color(0xFF4CBFFF)), Triple("History", "history", Color(0xFFB17BFF)), Triple("Downloads", "downloads", Color(0xFF52D6B0)), Triple("Settings", "settings", Color(0xFFFFB86B))).forEach { item ->
-                                Column(Modifier.weight(1f).background(Color(0xFF0D192D), RoundedCornerShape(15.dp)).border(1.dp, Color(0xFF223D62), RoundedCornerShape(15.dp)).clickable { screen = item.second }.padding(vertical = 13.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Box(Modifier.size(32.dp).background(item.third.copy(alpha = 0.14f), CircleShape), contentAlignment = Alignment.Center) { Text(item.first.take(1), color = item.third, style = MaterialTheme.typography.titleMedium) }
-                                    Spacer(Modifier.height(5.dp)); Text(item.first, color = Color(0xFFD7E8FF), style = MaterialTheme.typography.labelSmall, maxLines = 1)
+                        Spacer(Modifier.height(28.dp))
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f)) { Text("QUICK ACCESS", color = Color.White, style = MaterialTheme.typography.titleSmall, letterSpacing = 1.4.sp); Text("Your browser, organised", color = Color(0xFF8299B8), style = MaterialTheme.typography.labelSmall) }
+                            Text("CRAFTED BY SUDHAMOY", color = Color(0xFF6E9DD6), style = MaterialTheme.typography.labelSmall)
+                        }
+                        Spacer(Modifier.height(12.dp))
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            listOf(Triple("Bookmarks", "bookmarks", Color(0xFF4CBFFF)), Triple("History", "history", Color(0xFFB17BFF)), Triple("Downloads", "downloads", Color(0xFF52D6B0)), Triple("Settings", "settings", Color(0xFFFFB86B))).forEach { item ->
+                                Column(Modifier.weight(1f).background(Color(0xFF111D30), RoundedCornerShape(17.dp)).border(1.dp, Color(0xFF263D5C), RoundedCornerShape(17.dp)).clickable { screen = item.second }.padding(vertical = 14.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Box(Modifier.size(35.dp).background(item.third.copy(alpha = 0.13f), CircleShape), contentAlignment = Alignment.Center) { Text(item.first.take(1), color = item.third, style = MaterialTheme.typography.titleMedium, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold) }
+                                    Spacer(Modifier.height(7.dp)); Text(item.first, color = Color(0xFFD7E8FF), style = MaterialTheme.typography.labelSmall, maxLines = 1)
                                 }
                             }
                         }
-                        Spacer(Modifier.height(14.dp))
+                        Spacer(Modifier.height(22.dp))
                     }
                 } else {
                 key(activeTab.id) {
