@@ -93,6 +93,7 @@ private fun SudhaBrowserApp(context: Context) {
     var showSearchEngines by remember { mutableStateOf(false) }
     var textZoom by remember { mutableIntStateOf(prefs.getInt("text_zoom", 100).coerceIn(75, 200)) }
     var showFindBar by remember { mutableStateOf(false) }
+    var readerMode by remember { mutableStateOf(false) }
     var findText by remember { mutableStateOf("") }
     BrowserContentFilter.adsEnabled = adsEnabled
     BrowserContentFilter.trackingEnabled = trackingEnabled
@@ -204,6 +205,7 @@ private fun SudhaBrowserApp(context: Context) {
                         (activeTab.webView ?: WebView(ctx).also { activeTab.webView = it }).apply {
                             settings.javaScriptEnabled = true; settings.domStorageEnabled = true; settings.loadsImagesAutomatically = true; settings.javaScriptCanOpenWindowsAutomatically = false
                             settings.textZoom = textZoom
+                            settings.setSupportZoom(true); settings.builtInZoomControls = true; settings.displayZoomControls = false
                             settings.userAgentString = if (desktopMode) "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36" else android.webkit.WebSettings.getDefaultUserAgent(ctx)
                             setDownloadListener { url, userAgent, contentDisposition, mimeType, _ ->
                                 val request = DownloadManager.Request(Uri.parse(url)).apply {
@@ -225,6 +227,7 @@ private fun SudhaBrowserApp(context: Context) {
                                 }
                                 override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) { if (url != null) { activeTab.url = url; address = url } }
                                 override fun onPageFinished(view: WebView?, url: String?) {
+                                    if (readerMode) view?.evaluateJavascript("(function(){var s=document.getElementById('sudha-reader-style');if(!s){s=document.createElement('style');s.id='sudha-reader-style';document.head.appendChild(s);}s.textContent='body{max-width:780px!important;margin:24px auto!important;padding:24px!important;font-family:Georgia,serif!important;font-size:20px!important;line-height:1.8!important;background:#f5f1e8!important;color:#242424!important}';})();", null)
                                     if (url != null) {
                                         activeTab.url = url; activeTab.title = view?.title?.takeIf { it.isNotBlank() } ?: url; address = url
                                         val item = SavedPage(activeTab.title, url)
@@ -303,6 +306,23 @@ private fun SudhaBrowserApp(context: Context) {
                             Text("$textZoom%", color = Cyan, style = MaterialTheme.typography.labelLarge)
                             Slider(value = textZoom.toFloat(), onValueChange = { textZoom = it.toInt().coerceIn(75, 200) }, valueRange = 75f..200f, onValueChangeFinished = { prefs.edit().putInt("text_zoom", textZoom).apply(); tabs.forEach { it.webView?.settings?.textZoom = textZoom } })
                             Text("Adjust webpage text without changing image or layout zoom.", color = Color.LightGray, style = MaterialTheme.typography.bodySmall)
+                        }
+                        HorizontalDivider(color = Color(0xFF29364B))
+                        Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Text("Page tools", color = Color.White, style = MaterialTheme.typography.titleMedium)
+                            Text("Extra reading and accessibility tools for the current page.", color = Color.LightGray, style = MaterialTheme.typography.bodySmall)
+                            OutlinedButton(onClick = {
+                                readerMode = !readerMode
+                                val js = if (readerMode) "(function(){var s=document.getElementById('sudha-reader-style');if(!s){s=document.createElement('style');s.id='sudha-reader-style';document.head.appendChild(s);}s.textContent='body{max-width:780px!important;margin:24px auto!important;padding:24px!important;font-family:Georgia,serif!important;font-size:20px!important;line-height:1.8!important;background:#f5f1e8!important;color:#242424!important}';})();" else "document.getElementById('sudha-reader-style')?.remove();"
+                                activeTab.webView?.evaluateJavascript(js, null)
+                            }, modifier = Modifier.fillMaxWidth()) { Text(if (readerMode) "Turn off Reader Mode" else "Enable Reader Mode") }
+                            OutlinedButton(onClick = {
+                                activeTab.webView?.evaluateJavascript("(function(){if(!('speechSynthesis' in window)){return;}window.speechSynthesis.cancel();var t=document.body.innerText||document.title;var u=new SpeechSynthesisUtterance(t.slice(0,12000));window.speechSynthesis.speak(u);})();", null)
+                            }, modifier = Modifier.fillMaxWidth()) { Text("Read aloud") }
+                            OutlinedButton(onClick = {
+                                val target = "https://translate.google.com/translate?sl=auto&tl=en&u=" + Uri.encode(activeTab.url)
+                                runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(target))) }
+                            }, modifier = Modifier.fillMaxWidth()) { Text("Translate page to English") }
                         }
                         HorizontalDivider(color = Color(0xFF29364B))
                         Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
