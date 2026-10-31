@@ -63,6 +63,7 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.History
@@ -350,6 +351,46 @@ private fun SudhaBrowserApp(context: Context) {
                         colors = TextFieldDefaults.colors(focusedTextColor = Color.White, unfocusedTextColor = Color.White, focusedContainerColor = Color.Transparent, unfocusedContainerColor = Color.Transparent, focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent, cursorColor = Cyan),
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go), keyboardActions = KeyboardActions(onGo = { navigate(address) }))
                     IconButton(onClick = { navigate(address) }) { Icon(Icons.Default.ArrowForward, "Go", tint = Cyan) }
+                }
+                if (!showHomeDashboard) {
+                    Row(
+                        Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 2.dp),
+                        horizontalArrangement = Arrangement.SpaceEvenly,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        IconButton(onClick = { activeTab.webView?.goBack() }, enabled = activeTab.webView?.canGoBack() == true) {
+                            Icon(Icons.Default.ArrowBack, "Go back", tint = if (activeTab.webView?.canGoBack() == true) Color.White else Color.Gray)
+                        }
+                        IconButton(onClick = { activeTab.webView?.goForward() }, enabled = activeTab.webView?.canGoForward() == true) {
+                            Icon(Icons.Default.ArrowForward, "Go forward", tint = if (activeTab.webView?.canGoForward() == true) Color.White else Color.Gray)
+                        }
+                        IconButton(onClick = { if (progress in 1..99) activeTab.webView?.stopLoading() else activeTab.webView?.reload() }) {
+                            Icon(if (progress in 1..99) Icons.Default.Close else Icons.Default.Refresh, if (progress in 1..99) "Stop loading" else "Reload page", tint = Cyan)
+                        }
+                        IconButton(onClick = { saveBookmark() }) {
+                            Icon(Icons.Default.Bookmark, "Save bookmark", tint = Cyan)
+                        }
+                        IconButton(onClick = {
+                            val url = activeTab.url
+                            if (url.isNotBlank()) runCatching {
+                                context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, url), "Share page"))
+                            }
+                        }) { Icon(Icons.Default.Share, "Share page", tint = Color.White) }
+                        IconButton(onClick = { showFindBar = !showFindBar; findText = "" }) {
+                            Icon(Icons.Default.FindInPage, "Find in page", tint = Color.White)
+                        }
+                        IconButton(onClick = {
+                            val url = activeTab.url
+                            if (url.isNotBlank()) {
+                                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                clipboard.setPrimaryClip(ClipData.newPlainText("Page URL", url))
+                            }
+                        }) { Icon(Icons.Default.ContentCopy, "Copy link", tint = Color.White) }
+                        IconButton(onClick = { addTab() }) { Icon(Icons.Default.Add, "New tab", tint = Color.White) }
+                        IconButton(onClick = { showHomeDashboard = true; address = "" }) {
+                            Icon(Icons.Default.Home, "Home page", tint = Color.White)
+                        }
+                    }
                 }
                 if (showHomeDashboard && prefs.getBoolean("show_shortcuts", true)) {
                     Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
