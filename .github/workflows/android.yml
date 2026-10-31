@@ -1,4 +1,4 @@
-name: Android Debug APK
+name: Android APK Build and Release
 on:
   push:
     branches: [ "main" ]
@@ -6,7 +6,7 @@ on:
     branches: [ "main" ]
   workflow_dispatch:
 permissions:
-  contents: read
+  contents: write
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -21,11 +21,23 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.11.1"
-      - name: Build debug APK
-        run: gradle --no-daemon assembleDebug
-      - name: Upload APK
+      - name: Build APK
+        run: gradle --no-daemon assembleDebug -PversionCode=${{ github.run_number }}
+      - name: Prepare release APK
+        if: github.event_name != 'pull_request'
+        run: cp app/build/outputs/apk/debug/app-debug.apk sudha-browser.apk
+      - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: sudha-browser-debug
+          name: sudha-browser-debug-${{ github.run_number }}
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
+      - name: Publish update release
+        if: github.event_name != 'pull_request'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: build-${{ github.run_number }}
+          name: SUDHA BROWSER build ${{ github.run_number }}
+          body: Automated SUDHA BROWSER update. Install over the existing app when Android prompts.
+          files: sudha-browser.apk
+          make_latest: true
