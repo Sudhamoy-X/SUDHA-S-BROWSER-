@@ -180,6 +180,7 @@ private fun SudhaBrowserApp(context: Context) {
     var address by remember { mutableStateOf("") }
     var progress by remember { mutableIntStateOf(0) }
     var screen by remember { mutableStateOf("browser") }
+    var showHomeDashboard by remember { mutableStateOf(true) }
     var adsEnabled by remember { mutableStateOf(prefs.getBoolean("block_ads", true)) }
     var trackingEnabled by remember { mutableStateOf(prefs.getBoolean("block_trackers", true)) }
     var desktopMode by remember { mutableStateOf(prefs.getBoolean("desktop_mode", false)) }
@@ -251,10 +252,10 @@ private fun SudhaBrowserApp(context: Context) {
             value.contains(" ") || !value.contains(".") -> (when (searchEngine) { "Bing" -> "https://www.bing.com/search?q="; "DuckDuckGo" -> "https://duckduckgo.com/?q="; "Brave" -> "https://search.brave.com/search?q="; else -> "https://www.google.com/search?q=" }) + Uri.encode(value)
             else -> "https://$value"
         }
-        activeTab.url = target; activeTab.title = target; address = target; screen = "browser"
+        activeTab.url = target; activeTab.title = target; address = target; screen = "browser"; showHomeDashboard = false
         activeTab.webView?.loadUrl(target)
     }
-    fun addTab() { val tab = BrowserTab(nextTabId++); tabs.add(tab); activeTabId = tab.id; address = ""; screen = "browser" }
+    fun addTab() { val tab = BrowserTab(nextTabId++); tabs.add(tab); activeTabId = tab.id; address = ""; screen = "browser"; showHomeDashboard = true }
     fun closeTab(id: Int) {
         val index = tabs.indexOfFirst { it.id == id }; if (index < 0) return
         tabs[index].webView?.apply { stopLoading(); destroy() }; tabs.removeAt(index)
@@ -266,7 +267,7 @@ private fun SudhaBrowserApp(context: Context) {
         val item = SavedPage(activeTab.title, activeTab.url)
         if (bookmarks.none { it.url == item.url }) { bookmarks.add(0, item); persist("bookmarks", bookmarks) }
     }
-    fun openSaved(item: SavedPage) { activeTab.url = item.url; activeTab.title = item.title; address = item.url; screen = "browser"; activeTab.webView?.loadUrl(item.url) }
+    fun openSaved(item: SavedPage) { activeTab.url = item.url; activeTab.title = item.title; address = item.url; screen = "browser"; showHomeDashboard = false; activeTab.webView?.loadUrl(item.url) }
 
     BackHandler(enabled = screen != "browser" || activeTab.webView?.canGoBack() == true) {
         if (screen != "browser") screen = "browser" else activeTab.webView?.goBack()
@@ -293,14 +294,14 @@ private fun SudhaBrowserApp(context: Context) {
                 }
             }
             if (screen == "browser") {
-                Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp).background(SurfaceBlue, CircleShape).padding(start = 14.dp, end = 6.dp, top = 4.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                if (!showHomeDashboard) Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp).background(SurfaceBlue, CircleShape).padding(start = 14.dp, end = 6.dp, top = 4.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.Search, null, tint = Cyan); Spacer(Modifier.width(8.dp))
                     TextField(value = address, onValueChange = { address = it }, modifier = Modifier.weight(1f), placeholder = { Text("Search or enter address", color = Color.LightGray) }, singleLine = true,
                         colors = TextFieldDefaults.colors(focusedTextColor = Color.White, unfocusedTextColor = Color.White, focusedContainerColor = Color.Transparent, unfocusedContainerColor = Color.Transparent, focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent, cursorColor = Cyan),
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go), keyboardActions = KeyboardActions(onGo = { navigate(address) }))
                     IconButton(onClick = { navigate(address) }) { Icon(Icons.Default.ArrowForward, "Go", tint = Cyan) }
                 }
-                if (prefs.getBoolean("show_shortcuts", true)) {
+                if (!showHomeDashboard && prefs.getBoolean("show_shortcuts", true)) {
                     Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
                         listOf("Google" to "https://www.google.com", "YouTube" to "https://m.youtube.com", "Gmail" to "https://mail.google.com", "Maps" to "https://maps.google.com").forEachIndexed { index, item ->
                             val tint = listOf(Color(0xFF55B7FF), Color(0xFFFF5577), Color(0xFFFF657D), Color(0xFF55D6B0))[index]
@@ -314,13 +315,59 @@ private fun SudhaBrowserApp(context: Context) {
                         }
                     }
                 }
-                if (showFindBar) Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                if (!showHomeDashboard && showFindBar) Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                     TextField(value = findText, onValueChange = { findText = it; activeTab.webView?.findAllAsync(it) }, modifier = Modifier.weight(1f), placeholder = { Text("Find on page") }, singleLine = true)
                     TextButton(onClick = { activeTab.webView?.findAllAsync(findText); activeTab.webView?.findNext(true) }) { Text("Find") }
                     TextButton(onClick = { activeTab.webView?.findNext(true) }) { Text("Next") }
                     TextButton(onClick = { activeTab.webView?.clearMatches(); showFindBar = false; findText = "" }) { Text("Close") }
                 }
-                if (progress in 1..99) LinearProgressIndicator(progress = { progress / 100f }, modifier = Modifier.fillMaxWidth().height(2.dp), color = ElectricBlue, trackColor = Midnight)
+                if (!showHomeDashboard && progress in 1..99) LinearProgressIndicator(progress = { progress / 100f }, modifier = Modifier.fillMaxWidth().height(2.dp), color = ElectricBlue, trackColor = Midnight)
+                if (showHomeDashboard) {
+                    Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(androidx.compose.foundation.rememberScrollState()).padding(horizontal = 18.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                        Spacer(Modifier.height(18.dp))
+                        SudhaBrandMark(Modifier.size(112.dp))
+                        Spacer(Modifier.height(10.dp))
+                        Text("SUDHA", color = Color.White, style = MaterialTheme.typography.headlineLarge, letterSpacing = androidx.compose.ui.unit.sp(8), fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
+                        Text("B R O W S E R", color = Cyan, style = MaterialTheme.typography.labelMedium, letterSpacing = androidx.compose.ui.unit.sp(5))
+                        Spacer(Modifier.height(7.dp))
+                        Text("FASTER  •  SAFER  •  TOGETHER", color = Color(0xFF9AB9E4), style = MaterialTheme.typography.labelSmall, letterSpacing = androidx.compose.ui.unit.sp(1.5))
+                        Spacer(Modifier.height(24.dp))
+                        Row(Modifier.fillMaxWidth().background(Brush.horizontalGradient(listOf(Color(0xFF142747), Color(0xFF101A33))), RoundedCornerShape(22.dp)).border(1.dp, Color(0xFF28518A), RoundedCornerShape(22.dp)).padding(start = 14.dp, end = 6.dp, top = 5.dp, bottom = 5.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Search, null, tint = Cyan, modifier = Modifier.size(24.dp)); Spacer(Modifier.width(8.dp))
+                            TextField(value = address, onValueChange = { address = it }, modifier = Modifier.weight(1f), placeholder = { Text("Search or type URL", color = Color(0xFF9BAFCB)) }, singleLine = true, colors = TextFieldDefaults.colors(focusedTextColor = Color.White, unfocusedTextColor = Color.White, focusedContainerColor = Color.Transparent, unfocusedContainerColor = Color.Transparent, focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent, cursorColor = Cyan), keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go), keyboardActions = KeyboardActions(onGo = { navigate(address) }))
+                            IconButton(onClick = { navigate(address) }) { Icon(Icons.Default.ArrowForward, "Search", tint = Cyan) }
+                        }
+                        if (prefs.getBoolean("show_shortcuts", true)) {
+                            Spacer(Modifier.height(18.dp))
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                                listOf("Google" to "https://www.google.com", "YouTube" to "https://m.youtube.com", "Gmail" to "https://mail.google.com", "Maps" to "https://maps.google.com").forEachIndexed { index, item ->
+                                    val tint = listOf(Color(0xFF55B7FF), Color(0xFFFF5577), Color(0xFFFF657D), Color(0xFF55D6B0))[index]
+                                    Column(Modifier.weight(1f).background(Brush.verticalGradient(listOf(Color(0xFF172B4A), Color(0xFF0A1428))), RoundedCornerShape(17.dp)).border(1.dp, Color(0xFF294B7A), RoundedCornerShape(17.dp)).clickable { navigate(item.second) }.padding(vertical = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                                        Box(Modifier.size(34.dp).background(tint.copy(alpha = 0.15f), CircleShape), contentAlignment = Alignment.Center) { Text(item.first.take(1), color = tint, style = MaterialTheme.typography.titleMedium) }
+                                        Spacer(Modifier.height(6.dp)); Text(item.first, color = Color(0xFFD7E8FF), style = MaterialTheme.typography.labelSmall, maxLines = 1)
+                                    }
+                                }
+                            }
+                        }
+                        Spacer(Modifier.height(22.dp))
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) { Text("QUICK ACCESS", color = Color.White, style = MaterialTheme.typography.titleSmall, letterSpacing = androidx.compose.ui.unit.sp(1.5)); Spacer(Modifier.weight(1f)); Text("Crafted by Sudhamoy", color = Color(0xFF7EA6D8), style = MaterialTheme.typography.labelSmall) }
+                        Spacer(Modifier.height(10.dp))
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                            listOf(Triple("Saved", "bookmarks", Color(0xFF4CBFFF)), Triple("History", "history", Color(0xFFB17BFF)), Triple("Downloads", "downloads", Color(0xFF52D6B0)), Triple("Settings", "settings", Color(0xFFFFB86B))).forEach { item ->
+                                Column(Modifier.weight(1f).background(Color(0xFF0D192D), RoundedCornerShape(15.dp)).border(1.dp, Color(0xFF223D62), RoundedCornerShape(15.dp)).clickable { screen = item.second }.padding(vertical = 13.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Box(Modifier.size(32.dp).background(item.third.copy(alpha = 0.14f), CircleShape), contentAlignment = Alignment.Center) { Text(item.first.take(1), color = item.third, style = MaterialTheme.typography.titleMedium) }
+                                    Spacer(Modifier.height(5.dp)); Text(item.first, color = Color(0xFFD7E8FF), style = MaterialTheme.typography.labelSmall, maxLines = 1)
+                                }
+                            }
+                        }
+                        Spacer(Modifier.height(18.dp))
+                        Row(Modifier.fillMaxWidth().background(Brush.horizontalGradient(listOf(Color(0xFF0D1E3A), Color(0xFF17113A))), RoundedCornerShape(18.dp)).border(1.dp, Color(0xFF273F77), RoundedCornerShape(18.dp)).padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f)) { Text("YOUR WEB. YOUR WAY.", color = Color.White, style = MaterialTheme.typography.titleSmall); Text("A cleaner, faster browsing space.", color = Color(0xFF9CB8DC), style = MaterialTheme.typography.bodySmall) }
+                            SudhaBrandMark(Modifier.size(48.dp))
+                        }
+                        Spacer(Modifier.height(14.dp))
+                    }
+                } else {
                 key(activeTab.id) {
                     AndroidView(
                         modifier = Modifier.weight(1f).fillMaxWidth().pointerInput(activeTab.id, gestureNavigationEnabled) {
@@ -372,6 +419,7 @@ private fun SudhaBrowserApp(context: Context) {
                             if (this.url.isNullOrBlank()) loadUrl(activeTab.url)
                         }
                     }, update = { view: WebView -> if (view.url != activeTab.url && activeTab.url.isNotBlank()) view.loadUrl(activeTab.url) })
+                }
                 }
             } else {
                 val heading = when (screen) { "tabs" -> "Your tabs"; "bookmarks" -> "Bookmarks"; "history" -> "History"; "settings" -> "Privacy & settings"; else -> "Downloads" }
