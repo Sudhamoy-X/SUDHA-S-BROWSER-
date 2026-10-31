@@ -23,8 +23,10 @@ object BrowserContentFilter {
     )
 
     val blockedRequestCount = AtomicInteger(0)
+    @Volatile var adsEnabled: Boolean = true
+    @Volatile var trackingEnabled: Boolean = true
 
-    fun isBlocked(rawUrl: String, adsEnabled: Boolean, trackingEnabled: Boolean): Boolean {
+    fun isBlocked(rawUrl: String): Boolean {
         if (!adsEnabled && !trackingEnabled) return false
         val host = runCatching { Uri.parse(rawUrl).host?.lowercase()?.trimEnd('.') }.getOrNull()
             ?: return false
