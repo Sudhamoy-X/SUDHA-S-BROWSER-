@@ -839,7 +839,12 @@ private fun SudhaBrowserApp(context: Context) {
                         }
                     }
                     "bookmarks", "history" -> {
-                        val list = if (screen == "bookmarks") bookmarks else history
+                        val baseList = if (screen == "bookmarks") bookmarks.toList() else history.toList()
+                        val filteredList = baseList.filter { savedSearch.isBlank() || it.title.contains(savedSearch, true) || it.url.contains(savedSearch, true) }
+                        val list = if (screen == "bookmarks" && sortBookmarksAZ) filteredList.sortedBy { it.title.lowercase() } else filteredList
+                        Column(Modifier.weight(1f).fillMaxWidth()) {
+                        OutlinedTextField(value = savedSearch, onValueChange = { savedSearch = it }, modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp), singleLine = true, placeholder = { Text("Search saved pages") }, leadingIcon = { Icon(Icons.Default.Search, null) })
+                        if (screen == "bookmarks") TextButton(onClick = { sortBookmarksAZ = !sortBookmarksAZ }, modifier = Modifier.align(Alignment.End)) { Text(if (sortBookmarksAZ) "Sort: A to Z" else "Sort: Recently saved", color = Cyan) }
                         if (list.isEmpty()) Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) { Text(if (screen == "bookmarks") "No bookmarks yet" else "No browsing history yet", color = Color.LightGray) }
                         else LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             items(list.toList()) { item ->
@@ -849,7 +854,8 @@ private fun SudhaBrowserApp(context: Context) {
                                 }
                             }
                         }
-                        if (screen == "history" && history.isNotEmpty()) TextButton(onClick = { history.clear(); persist("history", history) }, modifier = Modifier.align(Alignment.End).padding(end = 12.dp)) { Text("Clear history", color = Cyan) }
+                        if (screen == "history" && history.isNotEmpty()) TextButton(onClick = { history.clear(); persist("history", history); savedSearch = "" }, modifier = Modifier.align(Alignment.End).padding(end = 12.dp)) { Text("Clear history", color = Cyan) }
+                        }
                     }
                     "downloads" -> {
                         if (downloads.isEmpty()) {
