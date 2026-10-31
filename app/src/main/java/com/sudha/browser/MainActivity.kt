@@ -200,7 +200,7 @@ private fun SudhaBrowserApp(context: Context) {
             restored.addAll(saved.ifEmpty { listOf(BrowserTab(1)) })
         }
     }
-    val recentlyClosedTabs = remember { mutableStateListOf<SavedPage>() }
+    val recentlyClosedTabs = remember { mutableStateListOf<SavedPage>().also { it.addAll(readList("recently_closed_tabs").take(10)) } }
     var tabSearch by remember { mutableStateOf("") }
     var savedSearch by remember { mutableStateOf("") }
     var sortBookmarksAZ by remember { mutableStateOf(false) }
@@ -307,6 +307,7 @@ private fun SudhaBrowserApp(context: Context) {
         list.forEach { array.put(JSONObject().put("title", it.title).put("url", it.url)) }
         prefs.edit().putString(key, array.toString()).apply()
     }
+    fun persistRecentlyClosedTabs() = persist("recently_closed_tabs", recentlyClosedTabs)
     fun navigate(raw: String) {
         val value = raw.trim()
         if (value.isBlank()) return
@@ -339,12 +340,13 @@ private fun SudhaBrowserApp(context: Context) {
             showHomeDashboard = selected.url.isBlank()
             screen = "browser"
         }
+        persistRecentlyClosedTabs()
         persistSession()
     }
     fun duplicateActiveTab() { val source = activeTab; val copy = BrowserTab(nextTabId++, source.url, source.title); tabs.add(copy); activeTabId = copy.id; address = copy.url; screen = "browser"; showHomeDashboard = copy.url.isBlank(); persistSession() }
-    fun reopenLastClosedTab() { val last = recentlyClosedTabs.firstOrNull() ?: return; recentlyClosedTabs.removeAt(0); val tab = BrowserTab(nextTabId++, last.url, last.title); tabs.add(tab); activeTabId = tab.id; address = tab.url; screen = "browser"; showHomeDashboard = false; persistSession() }
-    fun closeOtherTabs() { val keep = activeTabId; tabs.filter { it.id != keep }.forEach { tab -> if (tab.url.isNotBlank()) recentlyClosedTabs.add(0, SavedPage(tab.title, tab.url)); tab.webView?.apply { stopLoading(); destroy() } }; while (recentlyClosedTabs.size > 10) recentlyClosedTabs.removeAt(recentlyClosedTabs.lastIndex); tabs.removeAll { it.id != keep }; persistSession() }
-    fun closeAllTabs() { tabs.forEach { tab -> if (tab.url.isNotBlank()) recentlyClosedTabs.add(0, SavedPage(tab.title, tab.url)); tab.webView?.apply { stopLoading(); destroy() } }; while (recentlyClosedTabs.size > 10) recentlyClosedTabs.removeAt(recentlyClosedTabs.lastIndex); tabs.clear(); val fresh = BrowserTab(nextTabId++); tabs.add(fresh); activeTabId = fresh.id; address = ""; screen = "browser"; showHomeDashboard = true; persistSession() }
+    fun reopenLastClosedTab() { val last = recentlyClosedTabs.firstOrNull() ?: return; recentlyClosedTabs.removeAt(0); persistRecentlyClosedTabs(); val tab = BrowserTab(nextTabId++, last.url, last.title); tabs.add(tab); activeTabId = tab.id; address = tab.url; screen = "browser"; showHomeDashboard = false; persistSession() }
+    fun closeOtherTabs() { val keep = activeTabId; tabs.filter { it.id != keep }.forEach { tab -> if (tab.url.isNotBlank()) recentlyClosedTabs.add(0, SavedPage(tab.title, tab.url)); tab.webView?.apply { stopLoading(); destroy() } }; while (recentlyClosedTabs.size > 10) recentlyClosedTabs.removeAt(recentlyClosedTabs.lastIndex); persistRecentlyClosedTabs(); tabs.removeAll { it.id != keep }; persistSession() }
+    fun closeAllTabs() { tabs.forEach { tab -> if (tab.url.isNotBlank()) recentlyClosedTabs.add(0, SavedPage(tab.title, tab.url)); tab.webView?.apply { stopLoading(); destroy() } }; while (recentlyClosedTabs.size > 10) recentlyClosedTabs.removeAt(recentlyClosedTabs.lastIndex); persistRecentlyClosedTabs(); tabs.clear(); val fresh = BrowserTab(nextTabId++); tabs.add(fresh); activeTabId = fresh.id; address = ""; screen = "browser"; showHomeDashboard = true; persistSession() }
 
     fun saveBookmark() {
         if (activeTab.url.isBlank()) return
