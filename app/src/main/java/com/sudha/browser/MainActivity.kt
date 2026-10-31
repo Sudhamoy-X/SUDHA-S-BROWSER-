@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.app.DownloadManager
 import android.content.Context
 import android.content.Intent
+import java.io.ByteArrayInputStream
 import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Bundle
@@ -36,6 +37,7 @@ import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Tab
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -79,6 +81,10 @@ private fun SudhaBrowserApp(context: Context) {
     var address by remember { mutableStateOf("") }
     var progress by remember { mutableIntStateOf(0) }
     var screen by remember { mutableStateOf("browser") }
+    var adsEnabled by remember { mutableStateOf(prefs.getBoolean("block_ads", true)) }
+    var trackingEnabled by remember { mutableStateOf(prefs.getBoolean("block_trackers", true)) }
+    BrowserContentFilter.adsEnabled = adsEnabled
+    BrowserContentFilter.trackingEnabled = trackingEnabled
     var downloads by remember { mutableStateOf<List<DownloadEntry>>(emptyList()) }
     val downloadManager = remember { context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager }
 
@@ -161,6 +167,7 @@ private fun SudhaBrowserApp(context: Context) {
                 Column(Modifier.weight(1f)) { Text("SUDHA BROWSER", color = Color.White, style = MaterialTheme.typography.titleMedium); Text("Your Web. Your Way.", color = Cyan, style = MaterialTheme.typography.labelSmall) }
                 IconButton(onClick = { saveBookmark() }) { Icon(Icons.Default.Bookmark, "Bookmark page", tint = Color.White) }
                 IconButton(onClick = { activeTab.webView?.reload() }) { Icon(Icons.Default.Refresh, "Reload", tint = Color.White) }
+                IconButton(onClick = { screen = "settings" }) { Icon(Icons.Default.Settings, "Settings", tint = Color.White) }
                 IconButton(onClick = { screen = "tabs" }) { BadgedBox(badge = { Badge { Text(tabs.size.toString()) } }) { Icon(Icons.Default.Tab, "Tabs", tint = Color.White) } }
             }
             if (screen == "browser") {
@@ -173,7 +180,9 @@ private fun SudhaBrowserApp(context: Context) {
                 }
                 if (progress in 1..99) LinearProgressIndicator(progress = { progress / 100f }, modifier = Modifier.fillMaxWidth().height(2.dp), color = ElectricBlue, trackColor = Midnight)
                 key(activeTab.id) {
-                    AndroidView(Modifier.weight(1f).fillMaxWidth(), factory = { ctx ->
+                    AndroidView(
+                        modifier = Modifier.weight(1f).fillMaxWidth(),
+                        factory = { ctx: Context ->
                         (activeTab.webView ?: WebView(ctx).also { activeTab.webView = it }).apply {
                             settings.javaScriptEnabled = true; settings.domStorageEnabled = true; settings.loadsImagesAutomatically = true; settings.javaScriptCanOpenWindowsAutomatically = false
                             setDownloadListener { url, userAgent, contentDisposition, mimeType, _ ->
@@ -186,6 +195,14 @@ private fun SudhaBrowserApp(context: Context) {
                                 downloadManager.enqueue(request)
                             }
                             webViewClient = object : WebViewClient() {
+                                override fun shouldInterceptRequest(view: WebView?, request: android.webkit.WebResourceRequest?): android.webkit.WebResourceResponse? {
+                                    val requestUrl = request?.url?.toString() ?: return null
+                                    if (BrowserContentFilter.isBlocked(requestUrl)) {
+                                        BrowserContentFilter.blockedRequestCount.incrementAndGet()
+                                        return android.webkit.WebResourceResponse("text/plain", "utf-8", ByteArrayInputStream(ByteArray(0)))
+                                    }
+                                    return super.shouldInterceptRequest(view, request)
+                                }
                                 override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) { if (url != null) { activeTab.url = url; address = url } }
                                 override fun onPageFinished(view: WebView?, url: String?) {
                                     if (url != null) {
@@ -200,16 +217,44 @@ private fun SudhaBrowserApp(context: Context) {
                             webChromeClient = object : WebChromeClient() { override fun onProgressChanged(view: WebView?, newProgress: Int) { progress = newProgress } }
                             if (this.url.isNullOrBlank()) loadUrl(activeTab.url)
                         }
-                    }, update = { view -> if (view.url != activeTab.url && activeTab.url.isNotBlank()) view.loadUrl(activeTab.url) })
+                    , update = { view: WebView -> if (view.url != activeTab.url && activeTab.url.isNotBlank()) view.loadUrl(activeTab.url) })
                 }
             } else {
-                val heading = when (screen) { "tabs" -> "Your tabs"; "bookmarks" -> "Bookmarks"; "history" -> "History"; else -> "Downloads" }
+                val heading = when (screen) { "tabs" -> "Your tabs"; "bookmarks" -> "Bookmarks"; "history" -> "History"; "settings" -> "Privacy & settings"; else -> "Downloads" }
                 Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text(heading, color = Color.White, style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
                     if (screen == "tabs") Text("${tabs.size} open", color = Cyan)
                     if (screen == "tabs") FilledIconButton(onClick = { addTab() }) { Icon(Icons.Default.Add, "New tab") }
                 }
                 when (screen) {
+                    "settings" -> Column(Modifier.weight(1f).fillMaxWidth().padding(horizontal = 18.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f)) {
+                                Text("Block advertisements", color = Color.White, style = MaterialTheme.typography.titleMedium)
+                                Text("Blocks requests to known advertising domains", color = Color.LightGray, style = MaterialTheme.typography.bodySmall)
+                            }
+                            Switch(checked = adsEnabled, onCheckedChange = {
+                                adsEnabled = it
+                                prefs.edit().putBoolean("block_ads", it).apply()
+                                BrowserContentFilter.adsEnabled = it
+                            })
+                        }
+                        HorizontalDivider(color = Color(0xFF29364B))
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f)) {
+                                Text("Tracking protection", color = Color.White, style = MaterialTheme.typography.titleMedium)
+                                Text("Blocks requests to selected analytics and tracking domains", color = Color.LightGray, style = MaterialTheme.typography.bodySmall)
+                            }
+                            Switch(checked = trackingEnabled, onCheckedChange = {
+                                trackingEnabled = it
+                                prefs.edit().putBoolean("block_trackers", it).apply()
+                                BrowserContentFilter.trackingEnabled = it
+                            })
+                        }
+                        HorizontalDivider(color = Color(0xFF29364B))
+                        Text("Protection is based on a built-in domain list. Some ads and trackers may still load, and some websites may need these services to work. This is not a VPN or a complete network-wide blocker.", color = Color.Gray, style = MaterialTheme.typography.bodySmall)
+                        Text("Blocked requests this session: ${BrowserContentFilter.blockedRequestCount.get()}", color = Cyan, style = MaterialTheme.typography.labelMedium)
+                    }
                     "tabs" -> LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         items(tabs, key = { it.id }) { tab ->
                             Row(Modifier.fillMaxWidth().background(if (tab.id == activeTabId) Color(0xFF172B48) else SurfaceBlue, RoundedCornerShape(16.dp)).clickable { activeTabId = tab.id; address = tab.url; screen = "browser" }.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
