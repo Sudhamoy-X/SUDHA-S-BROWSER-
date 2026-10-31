@@ -85,7 +85,7 @@ private val SurfaceBlue = Color(0xFF111A2B)
 private val ElectricBlue = Color(0xFF398BFF)
 private val Cyan = Color(0xFF45D7F5)
 
-private data class BrowserTab(val id: Int, var url: String = "https://www.google.com", var title: String = "New tab", var webView: WebView? = null)
+private data class BrowserTab(val id: Int, var url: String = "", var title: String = "New tab", var webView: WebView? = null)
 private data class SavedPage(val title: String, val url: String)
 private data class DownloadEntry(val id: Long, val title: String, val status: String, val downloaded: Long, val total: Long, val reason: Int, val uri: Uri?)
 
@@ -271,8 +271,17 @@ private fun SudhaBrowserApp(context: Context) {
     }
     fun openSaved(item: SavedPage) { activeTab.url = item.url; activeTab.title = item.title; address = item.url; screen = "browser"; showHomeDashboard = false; activeTab.webView?.loadUrl(item.url) }
 
-    BackHandler(enabled = screen != "browser" || activeTab.webView?.canGoBack() == true) {
-        if (screen != "browser") screen = "browser" else activeTab.webView?.goBack()
+    BackHandler(enabled = screen != "browser" || !showHomeDashboard || activeTab.webView?.canGoBack() == true) {
+        if (screen != "browser") {
+            screen = "browser"
+            showHomeDashboard = activeTab.url.isBlank()
+            address = activeTab.url
+        } else if (activeTab.webView?.canGoBack() == true) {
+            activeTab.webView?.goBack()
+        } else {
+            showHomeDashboard = true
+            address = ""
+        }
     }
 
     MaterialTheme(colorScheme = darkColorScheme(primary = ElectricBlue, secondary = Cyan, background = Midnight, surface = SurfaceBlue)) {
@@ -418,7 +427,7 @@ private fun SudhaBrowserApp(context: Context) {
                                 }
                             }
                             webChromeClient = object : WebChromeClient() { override fun onProgressChanged(view: WebView?, newProgress: Int) { progress = newProgress } }
-                            if (this.url.isNullOrBlank()) loadUrl(activeTab.url)
+                            if (this.url.isNullOrBlank() && activeTab.url.isNotBlank()) loadUrl(activeTab.url)
                         }
                     }, update = { view: WebView -> if (view.url != activeTab.url && activeTab.url.isNotBlank()) view.loadUrl(activeTab.url) })
                 }
@@ -637,7 +646,7 @@ private fun SudhaBrowserApp(context: Context) {
                     }
                     "tabs" -> LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         items(tabs, key = { it.id }) { tab ->
-                            Row(Modifier.fillMaxWidth().background(if (tab.id == activeTabId) Color(0xFF172B48) else SurfaceBlue, RoundedCornerShape(16.dp)).clickable { activeTabId = tab.id; address = tab.url; screen = "browser" }.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Row(Modifier.fillMaxWidth().background(if (tab.id == activeTabId) Color(0xFF172B48) else SurfaceBlue, RoundedCornerShape(16.dp)).clickable { activeTabId = tab.id; address = tab.url; screen = "browser"; showHomeDashboard = tab.url.isBlank() }.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
                                 Column(Modifier.weight(1f)) { Text(tab.title, color = Color.White, maxLines = 1); Text(tab.url, color = Color.LightGray, maxLines = 1, style = MaterialTheme.typography.bodySmall) }
                                 IconButton(onClick = { closeTab(tab.id) }) { Icon(Icons.Default.Close, "Close tab", tint = Color.LightGray) }
                             }
@@ -726,7 +735,7 @@ private fun SudhaBrowserApp(context: Context) {
                 )
             }
             Row(Modifier.fillMaxWidth().navigationBarsPadding().background(Brush.verticalGradient(listOf(Color(0xFF101D35), Color(0xFF080F20)))).border(1.dp, Color(0xFF1D3B66)).padding(horizontal = 4.dp, vertical = 5.dp), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
-                NavigationBarItem(selected = screen == "browser", onClick = { screen = "browser" }, icon = { Icon(Icons.Default.Home, null) }, label = { Text("Home") })
+                NavigationBarItem(selected = screen == "browser" && showHomeDashboard, onClick = { screen = "browser"; showHomeDashboard = true; address = "" }, icon = { Icon(Icons.Default.Home, null) }, label = { Text("Home") })
                 NavigationBarItem(selected = screen == "bookmarks", onClick = { screen = "bookmarks" }, icon = { Icon(Icons.Default.Bookmark, null) }, label = { Text("Saved") })
                 NavigationBarItem(selected = screen == "history", onClick = { screen = "history" }, icon = { Icon(Icons.Default.History, null) }, label = { Text("History") })
                 NavigationBarItem(selected = screen == "downloads", onClick = { screen = "downloads" }, icon = { Icon(Icons.Default.Download, null) }, label = { Text("Downloads") })
