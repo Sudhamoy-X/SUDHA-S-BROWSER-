@@ -39,6 +39,8 @@ import androidx.compose.foundation.background
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -191,6 +193,8 @@ private fun SudhaBrowserApp(context: Context) {
     var imagesEnabled by remember { mutableStateOf(prefs.getBoolean("images_enabled", true)) }
     var cookiesEnabled by remember { mutableStateOf(prefs.getBoolean("cookies_enabled", true)) }
     var safeBrowsingEnabled by remember { mutableStateOf(prefs.getBoolean("safe_browsing", true)) }
+    var dataSaverEnabled by remember { mutableStateOf(prefs.getBoolean("data_saver", false)) }
+    var gestureNavigationEnabled by remember { mutableStateOf(prefs.getBoolean("gesture_navigation", true)) }
     var findText by remember { mutableStateOf("") }
     BrowserContentFilter.adsEnabled = adsEnabled
     BrowserContentFilter.trackingEnabled = trackingEnabled
@@ -319,10 +323,15 @@ private fun SudhaBrowserApp(context: Context) {
                 if (progress in 1..99) LinearProgressIndicator(progress = { progress / 100f }, modifier = Modifier.fillMaxWidth().height(2.dp), color = ElectricBlue, trackColor = Midnight)
                 key(activeTab.id) {
                     AndroidView(
-                        modifier = Modifier.weight(1f).fillMaxWidth(),
+                        modifier = Modifier.weight(1f).fillMaxWidth().pointerInput(activeTab.id, gestureNavigationEnabled) {
+                            if (gestureNavigationEnabled) {
+                                var drag = 0f
+                                detectHorizontalDragGestures(onHorizontalDrag = { change, amount -> change.consume(); drag += amount }, onDragEnd = { if (drag > 90f) activeTab.webView?.goBack() else if (drag < -90f) activeTab.webView?.goForward(); drag = 0f })
+                            }
+                        },
                         factory = { ctx: Context ->
                         (activeTab.webView ?: WebView(ctx).also { activeTab.webView = it }).apply {
-                            settings.javaScriptEnabled = javaScriptEnabled; settings.domStorageEnabled = true; settings.loadsImagesAutomatically = imagesEnabled; settings.javaScriptCanOpenWindowsAutomatically = false
+                            settings.javaScriptEnabled = javaScriptEnabled; settings.domStorageEnabled = true; settings.loadsImagesAutomatically = imagesEnabled && !dataSaverEnabled; settings.blockNetworkImage = dataSaverEnabled; settings.javaScriptCanOpenWindowsAutomatically = false
                             settings.safeBrowsingEnabled = safeBrowsingEnabled
                             CookieManager.getInstance().setAcceptCookie(cookiesEnabled)
                             CookieManager.getInstance().setAcceptThirdPartyCookies(this, false)
@@ -372,7 +381,17 @@ private fun SudhaBrowserApp(context: Context) {
                     if (screen == "tabs") FilledIconButton(onClick = { addTab() }) { Icon(Icons.Default.Add, "New tab") }
                 }
                 when (screen) {
-                    "settings" -> Column(Modifier.weight(1f).fillMaxWidth().padding(horizontal = 18.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
+                    "settings" -> Column(Modifier.weight(1f).fillMaxWidth().padding(horizontal = 18.dp).verticalScroll(androidx.compose.foundation.rememberScrollState()), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f)) { Text("Data Saver", color = Color.White, style = MaterialTheme.typography.titleMedium); Text("Blocks page images to reduce mobile data use", color = Color.LightGray, style = MaterialTheme.typography.bodySmall) }
+                            Switch(checked = dataSaverEnabled, onCheckedChange = { enabled -> dataSaverEnabled = enabled; prefs.edit().putBoolean("data_saver", enabled).apply(); tabs.forEach { tab -> tab.webView?.settings?.apply { blockNetworkImage = enabled; loadsImagesAutomatically = imagesEnabled && !enabled } } })
+                        }
+                        HorizontalDivider(color = Color(0xFF29364B))
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f)) { Text("Swipe navigation", color = Color.White, style = MaterialTheme.typography.titleMedium); Text("Swipe right to go back, left to go forward", color = Color.LightGray, style = MaterialTheme.typography.bodySmall) }
+                            Switch(checked = gestureNavigationEnabled, onCheckedChange = { gestureNavigationEnabled = it; prefs.edit().putBoolean("gesture_navigation", it).apply() })
+                        }
+                        HorizontalDivider(color = Color(0xFF29364B))
                         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                             Column(Modifier.weight(1f)) { Text("JavaScript", color = Color.White, style = MaterialTheme.typography.titleMedium); Text("Some websites require JavaScript to work", color = Color.LightGray, style = MaterialTheme.typography.bodySmall) }
                             Switch(checked = javaScriptEnabled, onCheckedChange = { javaScriptEnabled = it; prefs.edit().putBoolean("javascript_enabled", it).apply(); tabs.forEach { tab -> tab.webView?.settings?.javaScriptEnabled = it } })
@@ -380,7 +399,7 @@ private fun SudhaBrowserApp(context: Context) {
                         HorizontalDivider(color = Color(0xFF29364B))
                         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                             Column(Modifier.weight(1f)) { Text("Load images", color = Color.White, style = MaterialTheme.typography.titleMedium); Text("Turn off to reduce image data usage", color = Color.LightGray, style = MaterialTheme.typography.bodySmall) }
-                            Switch(checked = imagesEnabled, onCheckedChange = { imagesEnabled = it; prefs.edit().putBoolean("images_enabled", it).apply(); tabs.forEach { tab -> tab.webView?.settings?.loadsImagesAutomatically = it } })
+                            Switch(checked = imagesEnabled, onCheckedChange = { imagesEnabled = it; prefs.edit().putBoolean("images_enabled", it).apply(); tabs.forEach { tab -> tab.webView?.settings?.loadsImagesAutomatically = it && !dataSaverEnabled } })
                         }
                         HorizontalDivider(color = Color(0xFF29364B))
                         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
