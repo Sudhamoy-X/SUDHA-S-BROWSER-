@@ -2,6 +2,10 @@ package com.sudha.browser
 
 import android.annotation.SuppressLint
 import android.app.DownloadManager
+import android.print.PrintAttributes
+import android.print.PrintManager
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import java.io.ByteArrayInputStream
@@ -194,7 +198,8 @@ private fun SudhaBrowserApp(context: Context) {
                 }
                 if (showFindBar) Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                     TextField(value = findText, onValueChange = { findText = it; activeTab.webView?.findAllAsync(it) }, modifier = Modifier.weight(1f), placeholder = { Text("Find on page") }, singleLine = true)
-                    TextButton(onClick = { activeTab.webView?.findAllAsync(findText) }) { Text("Find") }
+                    TextButton(onClick = { activeTab.webView?.findAllAsync(findText); activeTab.webView?.findNext(true) }) { Text("Find") }
+                    TextButton(onClick = { activeTab.webView?.findNext(true) }) { Text("Next") }
                     TextButton(onClick = { activeTab.webView?.clearMatches(); showFindBar = false; findText = "" }) { Text("Close") }
                 }
                 if (progress in 1..99) LinearProgressIndicator(progress = { progress / 100f }, modifier = Modifier.fillMaxWidth().height(2.dp), color = ElectricBlue, trackColor = Midnight)
@@ -323,6 +328,18 @@ private fun SudhaBrowserApp(context: Context) {
                                 val target = "https://translate.google.com/translate?sl=auto&tl=en&u=" + Uri.encode(activeTab.url)
                                 runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(target))) }
                             }, modifier = Modifier.fillMaxWidth()) { Text("Translate page to English") }
+                            OutlinedButton(onClick = {
+                                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                clipboard.setPrimaryClip(ClipData.newPlainText("Page URL", activeTab.url))
+                            }, modifier = Modifier.fillMaxWidth()) { Text("Copy page link") }
+                            OutlinedButton(onClick = {
+                                val printManager = context.getSystemService(Context.PRINT_SERVICE) as PrintManager
+                                val adapter = activeTab.webView?.createPrintDocumentAdapter("SudhaBrowser-${System.currentTimeMillis()}")
+                                if (adapter != null) printManager.print(activeTab.title.take(40), adapter, PrintAttributes.Builder().build())
+                            }, modifier = Modifier.fillMaxWidth()) { Text("Save page as PDF") }
+                            OutlinedButton(onClick = {
+                                runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(activeTab.url))) }
+                            }, modifier = Modifier.fillMaxWidth()) { Text("Open in another app") }
                         }
                         HorizontalDivider(color = Color(0xFF29364B))
                         Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
