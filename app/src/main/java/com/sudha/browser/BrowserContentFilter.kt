@@ -10,7 +10,7 @@ import java.util.concurrent.atomic.AtomicInteger
 object BrowserContentFilter {
     private val blockedAds = setOf(
         "doubleclick.net", "googlesyndication.com", "googleadservices.com",
-        "adnxs.com", "adform.net", "", "taboola.com",
+        "adnxs.com", "adform.net", "taboola.com",
         "outbrain.com", "popads.net", "popcash.net", "zedo.com",
         "adroll.com", "criteo.com", "rubiconproject.com"
     )
