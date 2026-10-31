@@ -51,6 +51,8 @@ import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -97,7 +99,7 @@ private val ElectricBlue = Color(0xFF398BFF)
 private val Cyan = Color(0xFF45D7F5)
 
 private data class BrowserTab(val id: Int, var url: String = "", var title: String = "New tab", var webView: WebView? = null, var group: String = "Ungrouped")
-private data class SavedPage(val title: String, val url: String)
+private data class SavedPage(val title: String, val url: String, val folder: String = "General")
 private data class DownloadEntry(val id: Long, val title: String, val status: String, val downloaded: Long, val total: Long, val reason: Int, val uri: Uri?)
 
 class MainActivity : ComponentActivity() {
@@ -182,7 +184,7 @@ private fun SudhaBrowserApp(context: Context) {
     var checkingUpdate by remember { mutableStateOf(false) }
     fun readList(key: String): List<SavedPage> = runCatching {
         val array = JSONArray(prefs.getString(key, "[]"))
-        (0 until array.length()).map { i -> array.getJSONObject(i).let { SavedPage(it.optString("title"), it.optString("url")) } }
+        (0 until array.length()).map { i -> array.getJSONObject(i).let { SavedPage(it.optString("title"), it.optString("url"), it.optString("folder", "General")) } }
     }.getOrDefault(emptyList())
     val bookmarks = remember { mutableStateListOf<SavedPage>().also { it.addAll(readList("bookmarks")) } }
     val history = remember { mutableStateListOf<SavedPage>().also { it.addAll(readList("history")) } }
@@ -206,6 +208,8 @@ private fun SudhaBrowserApp(context: Context) {
     var groupMenuTabId by remember { mutableStateOf<Int?>(null) }
     var savedSearch by remember { mutableStateOf("") }
     var sortBookmarksAZ by remember { mutableStateOf(false) }
+    var selectedBookmarkFolder by remember { mutableStateOf("All") }
+    var bookmarkFolderMenuUrl by remember { mutableStateOf<String?>(null) }
     var showBookmarkEditDialog by remember { mutableStateOf(false) }
     var bookmarkEditUrl by remember { mutableStateOf("") }
     var bookmarkEditTitle by remember { mutableStateOf("") }
@@ -308,7 +312,7 @@ private fun SudhaBrowserApp(context: Context) {
 
     fun persist(key: String, list: List<SavedPage>) {
         val array = JSONArray()
-        list.forEach { array.put(JSONObject().put("title", it.title).put("url", it.url)) }
+        list.forEach { array.put(JSONObject().put("title", it.title).put("url", it.url).put("folder", it.folder)) }
         prefs.edit().putString(key, array.toString()).apply()
     }
     fun persistRecentlyClosedTabs() = persist("recently_closed_tabs", recentlyClosedTabs)
@@ -354,7 +358,7 @@ private fun SudhaBrowserApp(context: Context) {
 
     fun saveBookmark() {
         if (activeTab.url.isBlank()) return
-        val item = SavedPage(activeTab.title, activeTab.url)
+        val item = SavedPage(activeTab.title, activeTab.url, "General")
         if (bookmarks.none { it.url == item.url }) { bookmarks.add(0, item); persist("bookmarks", bookmarks) }
     }
     fun openSaved(item: SavedPage) { activeTab.url = item.url; activeTab.title = item.title; address = item.url; screen = "browser"; showHomeDashboard = false; activeTab.webView?.loadUrl(item.url) }
@@ -889,12 +893,17 @@ private fun SudhaBrowserApp(context: Context) {
                     }
                     "bookmarks", "history" -> {
                         val baseList = if (screen == "bookmarks") bookmarks.toList() else history.toList()
-                        val filteredList = baseList.filter { savedSearch.isBlank() || it.title.contains(savedSearch, true) || it.url.contains(savedSearch, true) }
+                        val filteredList = baseList.filter { (screen != "bookmarks" || selectedBookmarkFolder == "All" || it.folder == selectedBookmarkFolder) && (savedSearch.isBlank() || it.title.contains(savedSearch, true) || it.url.contains(savedSearch, true)) }
                         val list = if (screen == "bookmarks" && sortBookmarksAZ) filteredList.sortedBy { it.title.lowercase() } else filteredList
                         Column(Modifier.weight(1f).fillMaxWidth()) {
                         OutlinedTextField(value = savedSearch, onValueChange = { savedSearch = it }, modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp), singleLine = true, placeholder = { Text("Search saved pages") }, leadingIcon = { Icon(Icons.Default.Search, null) })
                         if (screen == "bookmarks") {
                             Text("${bookmarks.size} saved bookmarks", color = Color.Gray, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(start = 16.dp))
+                            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                (listOf("All", "General") + bookmarks.map { it.folder }.distinct().filter { it != "General" }.sorted()).forEach { folder ->
+                                    FilterChip(selected = selectedBookmarkFolder == folder, onClick = { selectedBookmarkFolder = folder }, label = { Text(folder, maxLines = 1) })
+                                }
+                            }
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
                                 TextButton(onClick = { sortBookmarksAZ = !sortBookmarksAZ }) { Text(if (sortBookmarksAZ) "Sort: A–Z" else "Sort: Recent", color = Cyan) }
                                 TextButton(onClick = { importBookmarksText = ""; showImportBookmarksDialog = true }) { Text("Import", color = Cyan) }
@@ -912,8 +921,21 @@ private fun SudhaBrowserApp(context: Context) {
                         else LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             items(list.toList()) { item ->
                                 Row(Modifier.fillMaxWidth().background(SurfaceBlue, RoundedCornerShape(14.dp)).clickable { openSaved(item) }.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-                                    Column(Modifier.weight(1f)) { Text(item.title, color = Color.White, maxLines = 1); Text(item.url, color = Color.LightGray, maxLines = 1, style = MaterialTheme.typography.bodySmall) }
+                                    Column(Modifier.weight(1f)) { Text(item.title, color = Color.White, maxLines = 1); Text(item.url, color = Color.LightGray, maxLines = 1, style = MaterialTheme.typography.bodySmall); if (screen == "bookmarks") Text(item.folder, color = Cyan, style = MaterialTheme.typography.labelSmall) }
                                     if (screen == "bookmarks") {
+                                        Box {
+                                            IconButton(onClick = { bookmarkFolderMenuUrl = item.url }) { Icon(Icons.Default.MoreVert, "Bookmark folder", tint = Cyan) }
+                                            DropdownMenu(expanded = bookmarkFolderMenuUrl == item.url, onDismissRequest = { bookmarkFolderMenuUrl = null }) {
+                                                listOf("General", "Personal", "Work", "Study", "Shopping").forEach { folder ->
+                                                    DropdownMenuItem(text = { Text(if (item.folder == folder) "✓ $folder" else folder) }, onClick = {
+                                                        val index = bookmarks.indexOfFirst { it.url == item.url }
+                                                        if (index >= 0) bookmarks[index] = bookmarks[index].copy(folder = folder)
+                                                        persist("bookmarks", bookmarks)
+                                                        bookmarkFolderMenuUrl = null
+                                                    })
+                                                }
+                                            }
+                                        }
                                         IconButton(onClick = { bookmarkEditUrl = item.url; bookmarkEditTitle = item.title; showBookmarkEditDialog = true }) { Icon(Icons.Default.Settings, "Edit bookmark", tint = Cyan) }
                                         IconButton(onClick = { runCatching { context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, item.url), "Share bookmark")) } }) { Icon(Icons.Default.Share, "Share bookmark", tint = Color.LightGray) }
                                         IconButton(onClick = { bookmarks.remove(item); persist("bookmarks", bookmarks) }) { Icon(Icons.Default.Delete, "Delete bookmark", tint = Color.LightGray) }
