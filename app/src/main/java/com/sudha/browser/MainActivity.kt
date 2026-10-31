@@ -197,6 +197,7 @@ private fun SudhaBrowserApp(context: Context) {
     var cookiesEnabled by remember { mutableStateOf(prefs.getBoolean("cookies_enabled", true)) }
     var safeBrowsingEnabled by remember { mutableStateOf(prefs.getBoolean("safe_browsing", true)) }
     var dataSaverEnabled by remember { mutableStateOf(prefs.getBoolean("data_saver", false)) }
+    var showShortcuts by remember { mutableStateOf(prefs.getBoolean("show_shortcuts", true)) }
     var gestureNavigationEnabled by remember { mutableStateOf(prefs.getBoolean("gesture_navigation", true)) }
     var findText by remember { mutableStateOf("") }
     BrowserContentFilter.adsEnabled = adsEnabled
@@ -261,9 +262,20 @@ private fun SudhaBrowserApp(context: Context) {
     fun closeTab(id: Int) {
         val index = tabs.indexOfFirst { it.id == id }; if (index < 0) return
         tabs[index].webView?.apply { stopLoading(); destroy() }; tabs.removeAt(index)
-        if (tabs.isEmpty()) { val fresh = BrowserTab(nextTabId++); tabs.add(fresh); activeTabId = fresh.id }
-        else if (activeTabId == id) activeTabId = tabs[(index - 1).coerceAtLeast(0)].id
-        address = tabs.first { it.id == activeTabId }.url
+        if (tabs.isEmpty()) {
+            val fresh = BrowserTab(nextTabId++)
+            tabs.add(fresh)
+            activeTabId = fresh.id
+            address = ""
+            screen = "browser"
+            showHomeDashboard = true
+        } else if (activeTabId == id) {
+            val selected = tabs[(index - 1).coerceAtLeast(0)]
+            activeTabId = selected.id
+            address = selected.url
+            showHomeDashboard = selected.url.isBlank()
+            screen = "browser"
+        }
     }
     fun saveBookmark() {
         val item = SavedPage(activeTab.title, activeTab.url)
@@ -348,7 +360,7 @@ private fun SudhaBrowserApp(context: Context) {
                             TextField(value = address, onValueChange = { address = it }, modifier = Modifier.weight(1f), placeholder = { Text("Search or type URL", color = Color(0xFF9BAFCB)) }, singleLine = true, colors = TextFieldDefaults.colors(focusedTextColor = Color.White, unfocusedTextColor = Color.White, focusedContainerColor = Color.Transparent, unfocusedContainerColor = Color.Transparent, focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent, cursorColor = Cyan), keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go), keyboardActions = KeyboardActions(onGo = { navigate(address) }))
                             IconButton(onClick = { navigate(address) }) { Icon(Icons.Default.ArrowForward, "Search", tint = Cyan) }
                         }
-                        if (prefs.getBoolean("show_shortcuts", true)) {
+                        if (showShortcuts) {
                             Spacer(Modifier.height(18.dp))
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
                                 listOf("Google" to "https://www.google.com", "YouTube" to "https://m.youtube.com", "Gmail" to "https://mail.google.com", "Maps" to "https://maps.google.com").forEachIndexed { index, item ->
@@ -476,7 +488,7 @@ private fun SudhaBrowserApp(context: Context) {
                                 Text("Homepage shortcuts", color = Color.White, style = MaterialTheme.typography.titleMedium)
                                 Text("Show quick links below the address bar", color = Color.LightGray, style = MaterialTheme.typography.bodySmall)
                             }
-                            Switch(checked = prefs.getBoolean("show_shortcuts", true), onCheckedChange = { prefs.edit().putBoolean("show_shortcuts", it).apply() })
+                            Switch(checked = showShortcuts, onCheckedChange = { showShortcuts = it; prefs.edit().putBoolean("show_shortcuts", it).apply() })
                         }
                         HorizontalDivider(color = Color(0xFF29364B))
                         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -511,9 +523,11 @@ private fun SudhaBrowserApp(context: Context) {
                             Switch(checked = desktopMode, onCheckedChange = {
                                 desktopMode = it
                                 prefs.edit().putBoolean("desktop_mode", it).apply()
-                                activeTab.webView?.let { webView ->
-                                    webView.settings.userAgentString = if (it) "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36" else android.webkit.WebSettings.getDefaultUserAgent(context)
-                                    webView.reload()
+                                tabs.forEach { tab ->
+                                    tab.webView?.let { webView ->
+                                        webView.settings.userAgentString = if (it) "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36" else android.webkit.WebSettings.getDefaultUserAgent(context)
+                                        if (tab.id == activeTabId) webView.reload()
+                                    }
                                 }
                             })
                         }
