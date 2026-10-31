@@ -325,7 +325,7 @@ private fun SudhaBrowserApp(context: Context) {
 
     MaterialTheme(colorScheme = darkColorScheme(primary = ElectricBlue, secondary = Cyan, background = Midnight, surface = SurfaceBlue)) {
         Column(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFF050A18), Color(0xFF08152C), Color(0xFF050914)))).statusBarsPadding()) {
-            if (screen != "browser" || !showHomeDashboard) Column(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 8.dp)) {
+            if (screen != "browser") Column(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 8.dp)) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     SudhaBrandMark(Modifier.size(54.dp))
                     Spacer(Modifier.width(10.dp))
@@ -351,7 +351,7 @@ private fun SudhaBrowserApp(context: Context) {
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go), keyboardActions = KeyboardActions(onGo = { navigate(address) }))
                     IconButton(onClick = { navigate(address) }) { Icon(Icons.Default.ArrowForward, "Go", tint = Cyan) }
                 }
-                if (!showHomeDashboard && prefs.getBoolean("show_shortcuts", true)) {
+                if (showHomeDashboard && prefs.getBoolean("show_shortcuts", true)) {
                     Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
                         listOf("Google" to "https://www.google.com", "YouTube" to "https://m.youtube.com", "Gmail" to "https://mail.google.com", "Maps" to "https://maps.google.com").forEachIndexed { index, item ->
                             val tint = listOf(Color(0xFF55B7FF), Color(0xFFFF5577), Color(0xFFFF657D), Color(0xFF55D6B0))[index]
