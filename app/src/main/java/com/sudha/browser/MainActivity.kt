@@ -390,21 +390,21 @@ private fun SudhaBrowserApp(context: Context) {
                 }
             }
             if (screen == "browser") {
-                if (!showHomeDashboard) Row(Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 3.dp).height(48.dp).background(SurfaceBlue, CircleShape).padding(start = 12.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                if (!showHomeDashboard) Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 2.dp).height(44.dp).background(SurfaceBlue, CircleShape).padding(start = 10.dp, end = 3.dp), verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.Search, null, tint = Cyan, modifier = Modifier.size(20.dp)); Spacer(Modifier.width(7.dp))
-                    TextField(value = address, onValueChange = { address = it }, modifier = Modifier.weight(1f).height(48.dp), textStyle = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp), placeholder = { Text("Search or enter address", color = Color.LightGray, fontSize = 13.sp) }, singleLine = true,
+                    TextField(value = address, onValueChange = { address = it }, modifier = Modifier.weight(1f).height(44.dp), textStyle = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp), placeholder = { Text("Search or enter address", color = Color.LightGray, fontSize = 13.sp) }, singleLine = true,
                         colors = TextFieldDefaults.colors(focusedTextColor = Color.White, unfocusedTextColor = Color.White, focusedContainerColor = Color.Transparent, unfocusedContainerColor = Color.Transparent, focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent, cursorColor = Cyan),
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go), keyboardActions = KeyboardActions(onGo = { navigate(address) }))
-                    IconButton(onClick = { navigate(address) }, modifier = Modifier.size(40.dp)) { Icon(Icons.Default.ArrowForward, "Go", tint = Cyan, modifier = Modifier.size(21.dp)) }
+                    IconButton(onClick = { navigate(address) }, modifier = Modifier.size(36.dp)) { Icon(Icons.Default.ArrowForward, "Go", tint = Cyan, modifier = Modifier.size(20.dp)) }
                 }
                 if (!showHomeDashboard) {
                     Row(
-                        Modifier.fillMaxWidth().height(44.dp).padding(horizontal = 8.dp),
+                        Modifier.fillMaxWidth().height(40.dp).padding(horizontal = 6.dp),
                         horizontalArrangement = Arrangement.SpaceEvenly,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        IconButton(onClick = { activeTab.webView?.goBack() }, enabled = activeTab.webView?.canGoBack() == true, modifier = Modifier.size(40.dp)) {
-                            Icon(Icons.Default.ArrowBack, "Back", tint = if (activeTab.webView?.canGoBack() == true) Color.White else Color.Gray, modifier = Modifier.size(21.dp))
+                        IconButton(onClick = { activeTab.webView?.goBack() }, enabled = activeTab.webView?.canGoBack() == true, modifier = Modifier.size(36.dp)) {
+                            Icon(Icons.Default.ArrowBack, "Back", tint = if (activeTab.webView?.canGoBack() == true) Color.White else Color.Gray, modifier = Modifier.size(20.dp))
                         }
                         IconButton(onClick = { activeTab.webView?.goForward() }, enabled = activeTab.webView?.canGoForward() == true, modifier = Modifier.size(40.dp)) {
                             Icon(Icons.Default.ArrowForward, "Forward", tint = if (activeTab.webView?.canGoForward() == true) Color.White else Color.Gray, modifier = Modifier.size(21.dp))
@@ -569,6 +569,10 @@ private fun SudhaBrowserApp(context: Context) {
                         (activeTab.webView ?: WebView(ctx).also { activeTab.webView = it }).apply {
                             settings.javaScriptEnabled = javaScriptEnabled; settings.domStorageEnabled = true; settings.loadsImagesAutomatically = imagesEnabled && !dataSaverEnabled; settings.blockNetworkImage = dataSaverEnabled; settings.javaScriptCanOpenWindowsAutomatically = !popupsBlocked; settings.setSupportMultipleWindows(!popupsBlocked)
                             settings.safeBrowsingEnabled = safeBrowsingEnabled
+                            // Respect mobile viewport metadata so responsive sites use the phone width.
+                            settings.useWideViewPort = true
+                            settings.loadWithOverviewMode = true
+                            settings.layoutAlgorithm = android.webkit.WebSettings.LayoutAlgorithm.NORMAL
                             CookieManager.getInstance().setAcceptCookie(cookiesEnabled)
                             CookieManager.getInstance().setAcceptThirdPartyCookies(this, thirdPartyCookies)
                             settings.textZoom = textZoom
