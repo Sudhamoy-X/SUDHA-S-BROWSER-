@@ -1,8 +1,13 @@
 package com.sudha.browser
 
 import android.annotation.SuppressLint
+import android.app.DownloadManager
+import android.content.Context
 import android.graphics.Bitmap
+import android.net.Uri
 import android.os.Bundle
+import android.os.Environment
+import android.webkit.URLUtil
 import android.webkit.WebChromeClient
 import android.webkit.WebView
 import android.webkit.WebViewClient
@@ -22,7 +27,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
@@ -36,189 +45,162 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import org.json.JSONArray
+import org.json.JSONObject
 
 private val Midnight = Color(0xFF080B14)
 private val SurfaceBlue = Color(0xFF111A2B)
 private val ElectricBlue = Color(0xFF398BFF)
 private val Cyan = Color(0xFF45D7F5)
 
-private data class BrowserTab(
-    val id: Int,
-    var url: String = "https://www.google.com",
-    var title: String = "New tab",
-    var webView: WebView? = null
-)
+private data class BrowserTab(val id: Int, var url: String = "https://www.google.com", var title: String = "New tab", var webView: WebView? = null)
+private data class SavedPage(val title: String, val url: String)
 
 class MainActivity : ComponentActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContent { SudhaBrowserApp() }
-    }
+    override fun onCreate(savedInstanceState: Bundle?) { super.onCreate(savedInstanceState); setContent { SudhaBrowserApp(this) } }
 }
 
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
-private fun SudhaBrowserApp() {
-    val tabs = remember { mutableStateListOf(BrowserTab(id = 1)) }
+private fun SudhaBrowserApp(context: Context) {
+    val prefs = remember { context.getSharedPreferences("sudha_browser_data", Context.MODE_PRIVATE) }
+    fun readList(key: String): List<SavedPage> = runCatching {
+        val array = JSONArray(prefs.getString(key, "[]"))
+        (0 until array.length()).map { i -> array.getJSONObject(i).let { SavedPage(it.optString("title"), it.optString("url")) } }
+    }.getOrDefault(emptyList())
+    val bookmarks = remember { mutableStateListOf<SavedPage>().also { it.addAll(readList("bookmarks")) } }
+    val history = remember { mutableStateListOf<SavedPage>().also { it.addAll(readList("history")) } }
+    val tabs = remember { mutableStateListOf(BrowserTab(1)) }
     var nextTabId by remember { mutableIntStateOf(2) }
     var activeTabId by remember { mutableIntStateOf(1) }
     var address by remember { mutableStateOf("") }
     var progress by remember { mutableIntStateOf(0) }
-    var showTabManager by remember { mutableStateOf(false) }
+    var screen by remember { mutableStateOf("browser") }
     val activeTab = tabs.firstOrNull { it.id == activeTabId } ?: tabs.first()
 
+    fun persist(key: String, list: List<SavedPage>) {
+        val array = JSONArray()
+        list.forEach { array.put(JSONObject().put("title", it.title).put("url", it.url)) }
+        prefs.edit().putString(key, array.toString()).apply()
+    }
     fun navigate(raw: String) {
         val value = raw.trim()
         if (value.isBlank()) return
         val target = when {
             value.startsWith("https://") || value.startsWith("http://") -> value
-            value.contains(" ") || !value.contains(".") -> "https://www.google.com/search?q=" + value.replace(" ", "+")
+            value.contains(" ") || !value.contains(".") -> "https://www.google.com/search?q=" + Uri.encode(value)
             else -> "https://$value"
         }
-        activeTab.url = target
-        activeTab.title = target
-        address = target
+        activeTab.url = target; activeTab.title = target; address = target; screen = "browser"
         activeTab.webView?.loadUrl(target)
     }
-
-    fun addTab() {
-        val tab = BrowserTab(id = nextTabId++)
-        tabs.add(tab)
-        activeTabId = tab.id
-        address = ""
-        showTabManager = false
-    }
-
-    fun closeTab(tabId: Int) {
-        val index = tabs.indexOfFirst { it.id == tabId }
-        if (index < 0) return
-        val removed = tabs[index]
-        removed.webView?.apply { stopLoading(); destroy() }
-        tabs.removeAt(index)
-        if (tabs.isEmpty()) {
-            val fresh = BrowserTab(id = nextTabId++)
-            tabs.add(fresh)
-            activeTabId = fresh.id
-        } else if (activeTabId == tabId) {
-            activeTabId = tabs[(index - 1).coerceAtLeast(0)].id
-        }
+    fun addTab() { val tab = BrowserTab(nextTabId++); tabs.add(tab); activeTabId = tab.id; address = ""; screen = "browser" }
+    fun closeTab(id: Int) {
+        val index = tabs.indexOfFirst { it.id == id }; if (index < 0) return
+        tabs[index].webView?.apply { stopLoading(); destroy() }; tabs.removeAt(index)
+        if (tabs.isEmpty()) { val fresh = BrowserTab(nextTabId++); tabs.add(fresh); activeTabId = fresh.id }
+        else if (activeTabId == id) activeTabId = tabs[(index - 1).coerceAtLeast(0)].id
         address = tabs.first { it.id == activeTabId }.url
     }
+    fun saveBookmark() {
+        val item = SavedPage(activeTab.title, activeTab.url)
+        if (bookmarks.none { it.url == item.url }) { bookmarks.add(0, item); persist("bookmarks", bookmarks) }
+    }
+    fun openSaved(item: SavedPage) { activeTab.url = item.url; activeTab.title = item.title; address = item.url; screen = "browser"; activeTab.webView?.loadUrl(item.url) }
 
-    BackHandler(enabled = showTabManager || activeTab.webView?.canGoBack() == true) {
-        if (showTabManager) showTabManager = false else activeTab.webView?.goBack()
+    BackHandler(enabled = screen != "browser" || activeTab.webView?.canGoBack() == true) {
+        if (screen != "browser") screen = "browser" else activeTab.webView?.goBack()
     }
 
     MaterialTheme(colorScheme = darkColorScheme(primary = ElectricBlue, secondary = Cyan, background = Midnight, surface = SurfaceBlue)) {
         Column(Modifier.fillMaxSize().background(Midnight).statusBarsPadding()) {
             Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.size(42.dp).background(Brush.linearGradient(listOf(ElectricBlue, Color(0xFF6548D8), Cyan)), RoundedCornerShape(14.dp)), contentAlignment = Alignment.Center) {
-                    Text("S", color = Color.White, style = MaterialTheme.typography.headlineMedium)
-                }
+                Box(Modifier.size(42.dp).background(Brush.linearGradient(listOf(ElectricBlue, Color(0xFF6548D8), Cyan)), RoundedCornerShape(14.dp)), contentAlignment = Alignment.Center) { Text("S", color = Color.White, style = MaterialTheme.typography.headlineMedium) }
                 Spacer(Modifier.width(10.dp))
-                Column(Modifier.weight(1f)) {
-                    Text("SUDHA BROWSER", color = Color.White, style = MaterialTheme.typography.titleMedium)
-                    Text("Your Web. Your Way.", color = Cyan, style = MaterialTheme.typography.labelSmall)
-                }
+                Column(Modifier.weight(1f)) { Text("SUDHA BROWSER", color = Color.White, style = MaterialTheme.typography.titleMedium); Text("Your Web. Your Way.", color = Cyan, style = MaterialTheme.typography.labelSmall) }
+                IconButton(onClick = { saveBookmark() }) { Icon(Icons.Default.Bookmark, "Bookmark page", tint = Color.White) }
                 IconButton(onClick = { activeTab.webView?.reload() }) { Icon(Icons.Default.Refresh, "Reload", tint = Color.White) }
-                IconButton(onClick = { showTabManager = true }) {
-                    BadgedBox(badge = { Badge { Text(tabs.size.toString()) } }) {
-                        Icon(Icons.Default.Tab, "Tabs", tint = Color.White)
-                    }
-                }
+                IconButton(onClick = { screen = "tabs" }) { BadgedBox(badge = { Badge { Text(tabs.size.toString()) } }) { Icon(Icons.Default.Tab, "Tabs", tint = Color.White) } }
             }
-
-            if (!showTabManager) {
+            if (screen == "browser") {
                 Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp).background(SurfaceBlue, CircleShape).padding(start = 14.dp, end = 6.dp, top = 4.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Search, null, tint = Cyan)
-                    Spacer(Modifier.width(8.dp))
-                    TextField(
-                        value = address, onValueChange = { address = it }, modifier = Modifier.weight(1f),
-                        placeholder = { Text("Search or enter address", color = Color.LightGray) }, singleLine = true,
-                        colors = TextFieldDefaults.colors(
-                            focusedTextColor = Color.White, unfocusedTextColor = Color.White,
-                            focusedContainerColor = Color.Transparent, unfocusedContainerColor = Color.Transparent,
-                            focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent, cursorColor = Cyan
-                        ),
-                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
-                        keyboardActions = KeyboardActions(onGo = { navigate(address) })
-                    )
+                    Icon(Icons.Default.Search, null, tint = Cyan); Spacer(Modifier.width(8.dp))
+                    TextField(value = address, onValueChange = { address = it }, modifier = Modifier.weight(1f), placeholder = { Text("Search or enter address", color = Color.LightGray) }, singleLine = true,
+                        colors = TextFieldDefaults.colors(focusedTextColor = Color.White, unfocusedTextColor = Color.White, focusedContainerColor = Color.Transparent, unfocusedContainerColor = Color.Transparent, focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent, cursorColor = Cyan),
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go), keyboardActions = KeyboardActions(onGo = { navigate(address) }))
                     IconButton(onClick = { navigate(address) }) { Icon(Icons.Default.ArrowForward, "Go", tint = Cyan) }
                 }
                 if (progress in 1..99) LinearProgressIndicator(progress = { progress / 100f }, modifier = Modifier.fillMaxWidth().height(2.dp), color = ElectricBlue, trackColor = Midnight)
-
                 key(activeTab.id) {
-                    AndroidView(
-                        modifier = Modifier.weight(1f).fillMaxWidth(),
-                        factory = { context ->
-                            (activeTab.webView ?: WebView(context).also { activeTab.webView = it }).apply {
-                                settings.javaScriptEnabled = true
-                                settings.domStorageEnabled = true
-                                settings.loadsImagesAutomatically = true
-                                settings.javaScriptCanOpenWindowsAutomatically = false
-                                webViewClient = object : WebViewClient() {
-                                    override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
-                                        if (url != null) { activeTab.url = url; address = url }
-                                    }
-                                    override fun onPageFinished(view: WebView?, url: String?) {
-                                        if (url != null) {
-                                            activeTab.url = url
-                                            activeTab.title = view?.title?.takeIf { it.isNotBlank() } ?: url
-                                            address = url
-                                        }
-                                    }
+                    AndroidView(Modifier.weight(1f).fillMaxWidth(), factory = { ctx ->
+                        (activeTab.webView ?: WebView(ctx).also { activeTab.webView = it }).apply {
+                            settings.javaScriptEnabled = true; settings.domStorageEnabled = true; settings.loadsImagesAutomatically = true; settings.javaScriptCanOpenWindowsAutomatically = false
+                            setDownloadListener { url, userAgent, contentDisposition, mimeType, _ ->
+                                val request = DownloadManager.Request(Uri.parse(url)).apply {
+                                    setMimeType(mimeType); addRequestHeader("User-Agent", userAgent)
+                                    setTitle(URLUtil.guessFileName(url, contentDisposition, mimeType)); setDescription("Downloading with SUDHA BROWSER")
+                                    setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+                                    setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, URLUtil.guessFileName(url, contentDisposition, mimeType))
                                 }
-                                webChromeClient = object : WebChromeClient() {
-                                    override fun onProgressChanged(view: WebView?, newProgress: Int) { progress = newProgress }
-                                }
-                                if (this.url.isNullOrBlank()) loadUrl(activeTab.url)
+                                (ctx.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager).enqueue(request)
                             }
-                        },
-                        update = { view ->
-                            if (view.url != activeTab.url && activeTab.url.isNotBlank()) view.loadUrl(activeTab.url)
+                            webViewClient = object : WebViewClient() {
+                                override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) { if (url != null) { activeTab.url = url; address = url } }
+                                override fun onPageFinished(view: WebView?, url: String?) {
+                                    if (url != null) {
+                                        activeTab.url = url; activeTab.title = view?.title?.takeIf { it.isNotBlank() } ?: url; address = url
+                                        val item = SavedPage(activeTab.title, url)
+                                        history.removeAll { it.url == url }; history.add(0, item)
+                                        while (history.size > 500) history.removeAt(history.lastIndex)
+                                        persist("history", history)
+                                    }
+                                }
+                            }
+                            webChromeClient = object : WebChromeClient() { override fun onProgressChanged(view: WebView?, newProgress: Int) { progress = newProgress } }
+                            if (this.url.isNullOrBlank()) loadUrl(activeTab.url)
                         }
-                    )
+                    }, update = { view -> if (view.url != activeTab.url && activeTab.url.isNotBlank()) view.loadUrl(activeTab.url) })
                 }
             } else {
+                val heading = when (screen) { "tabs" -> "Your tabs"; "bookmarks" -> "Bookmarks"; "history" -> "History"; else -> "Downloads" }
                 Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text("Your tabs", color = Color.White, style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
-                    Text("${tabs.size} open", color = Cyan, style = MaterialTheme.typography.labelMedium)
-                    Spacer(Modifier.width(8.dp))
-                    FilledIconButton(onClick = { addTab() }) { Icon(Icons.Default.Add, "New tab") }
+                    Text(heading, color = Color.White, style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
+                    if (screen == "tabs") Text("${tabs.size} open", color = Cyan)
+                    if (screen == "tabs") FilledIconButton(onClick = { addTab() }) { Icon(Icons.Default.Add, "New tab") }
                 }
-                LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    items(tabs, key = { it.id }) { tab ->
-                        Row(
-                            Modifier.fillMaxWidth()
-                                .background(if (tab.id == activeTabId) Color(0xFF172B48) else SurfaceBlue, RoundedCornerShape(16.dp))
-                                .clickable { activeTabId = tab.id; address = tab.url; showTabManager = false }
-                                .padding(14.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Box(Modifier.size(34.dp).background(Color(0xFF203B60), CircleShape), contentAlignment = Alignment.Center) {
-                                Text((tabs.indexOf(tab) + 1).toString(), color = Cyan)
+                when (screen) {
+                    "tabs" -> LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        items(tabs, key = { it.id }) { tab ->
+                            Row(Modifier.fillMaxWidth().background(if (tab.id == activeTabId) Color(0xFF172B48) else SurfaceBlue, RoundedCornerShape(16.dp)).clickable { activeTabId = tab.id; address = tab.url; screen = "browser" }.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Column(Modifier.weight(1f)) { Text(tab.title, color = Color.White, maxLines = 1); Text(tab.url, color = Color.LightGray, maxLines = 1, style = MaterialTheme.typography.bodySmall) }
+                                IconButton(onClick = { closeTab(tab.id) }) { Icon(Icons.Default.Close, "Close tab", tint = Color.LightGray) }
                             }
-                            Spacer(Modifier.width(12.dp))
-                            Column(Modifier.weight(1f)) {
-                                Text(tab.title, color = Color.White, maxLines = 1, style = MaterialTheme.typography.titleSmall)
-                                Text(tab.url, color = Color.LightGray, maxLines = 1, style = MaterialTheme.typography.bodySmall)
-                            }
-                            IconButton(onClick = { closeTab(tab.id) }) { Icon(Icons.Default.Close, "Close tab", tint = Color.LightGray) }
                         }
                     }
-                }
-                Button(onClick = { addTab() }, modifier = Modifier.fillMaxWidth().padding(16.dp)) {
-                    Icon(Icons.Default.Add, null)
-                    Spacer(Modifier.width(8.dp))
-                    Text("New tab")
+                    "bookmarks", "history" -> {
+                        val list = if (screen == "bookmarks") bookmarks else history
+                        if (list.isEmpty()) Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) { Text(if (screen == "bookmarks") "No bookmarks yet" else "No browsing history yet", color = Color.LightGray) }
+                        else LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            items(list.toList()) { item ->
+                                Row(Modifier.fillMaxWidth().background(SurfaceBlue, RoundedCornerShape(14.dp)).clickable { openSaved(item) }.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    Column(Modifier.weight(1f)) { Text(item.title, color = Color.White, maxLines = 1); Text(item.url, color = Color.LightGray, maxLines = 1, style = MaterialTheme.typography.bodySmall) }
+                                    if (screen == "bookmarks") IconButton(onClick = { bookmarks.remove(item); persist("bookmarks", bookmarks) }) { Icon(Icons.Default.Delete, "Delete bookmark", tint = Color.LightGray) }
+                                }
+                            }
+                        }
+                        if (screen == "history" && history.isNotEmpty()) TextButton(onClick = { history.clear(); persist("history", history) }, modifier = Modifier.align(Alignment.End).padding(end = 12.dp)) { Text("Clear history", color = Cyan) }
+                    }
+                    "downloads" -> Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) { Icon(Icons.Default.Download, null, tint = Cyan, modifier = Modifier.size(36.dp)); Text("Downloads are saved to your Downloads folder.", color = Color.LightGray) }
+                    }
                 }
             }
-
-            Row(Modifier.fillMaxWidth().navigationBarsPadding().background(SurfaceBlue).padding(horizontal = 18.dp, vertical = 8.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = { activeTab.webView?.let { if (it.canGoBack()) it.goBack() } }) { Icon(Icons.Default.ArrowBack, "Back", tint = Color.White) }
-                IconButton(onClick = { activeTab.webView?.let { if (it.canGoForward()) it.goForward() } }) { Icon(Icons.Default.ArrowForward, "Forward", tint = Color.White) }
-                IconButton(onClick = { navigate("https://www.google.com") }) { Icon(Icons.Default.Home, "Home", tint = Color.White) }
-                Text("${tabs.size} tabs", color = Cyan, style = MaterialTheme.typography.labelMedium, modifier = Modifier.clickable { showTabManager = true })
+            Row(Modifier.fillMaxWidth().navigationBarsPadding().background(SurfaceBlue).padding(horizontal = 8.dp, vertical = 6.dp), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
+                NavigationBarItem(selected = screen == "browser", onClick = { screen = "browser" }, icon = { Icon(Icons.Default.Home, null) }, label = { Text("Home") })
+                NavigationBarItem(selected = screen == "bookmarks", onClick = { screen = "bookmarks" }, icon = { Icon(Icons.Default.Bookmark, null) }, label = { Text("Saved") })
+                NavigationBarItem(selected = screen == "history", onClick = { screen = "history" }, icon = { Icon(Icons.Default.History, null) }, label = { Text("History") })
+                NavigationBarItem(selected = screen == "downloads", onClick = { screen = "downloads" }, icon = { Icon(Icons.Default.Download, null) }, label = { Text("Downloads") })
+                NavigationBarItem(selected = screen == "tabs", onClick = { screen = "tabs" }, icon = { Icon(Icons.Default.Tab, null) }, label = { Text("Tabs") })
             }
         }
     }
