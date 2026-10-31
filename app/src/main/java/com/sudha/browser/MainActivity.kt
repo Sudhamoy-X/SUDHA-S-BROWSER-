@@ -390,8 +390,10 @@ private fun SudhaBrowserApp(context: Context) {
                 }
             }
             if (screen == "browser") {
-                if (!showHomeDashboard) Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 2.dp).height(44.dp).background(SurfaceBlue, CircleShape).padding(start = 10.dp, end = 3.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Search, null, tint = Cyan, modifier = Modifier.size(20.dp)); Spacer(Modifier.width(7.dp))
+                if (!showHomeDashboard) Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 2.dp).height(44.dp).background(SurfaceBlue, CircleShape).padding(start = 4.dp, end = 3.dp), verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = { if (progress in 1..99) activeTab.webView?.stopLoading() else activeTab.webView?.reload() }, modifier = Modifier.size(36.dp)) {
+                        Icon(if (progress in 1..99) Icons.Default.Close else Icons.Default.Refresh, if (progress in 1..99) "Stop loading" else "Refresh page", tint = Cyan, modifier = Modifier.size(20.dp))
+                    }
                     TextField(value = address, onValueChange = { address = it }, modifier = Modifier.weight(1f).height(44.dp), textStyle = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp), placeholder = { Text("Search or enter address", color = Color.LightGray, fontSize = 13.sp) }, singleLine = true,
                         colors = TextFieldDefaults.colors(focusedTextColor = Color.White, unfocusedTextColor = Color.White, focusedContainerColor = Color.Transparent, unfocusedContainerColor = Color.Transparent, focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent, cursorColor = Cyan),
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go), keyboardActions = KeyboardActions(onGo = { navigate(address) }))
@@ -554,9 +556,6 @@ private fun SudhaBrowserApp(context: Context) {
                         }
                         IconButton(onClick = { showHomeDashboard = true; address = "" }) {
                             Icon(Icons.Default.Home, "Home", tint = Color.White, modifier = Modifier.size(22.dp))
-                        }
-                        IconButton(onClick = { if (progress in 1..99) activeTab.webView?.stopLoading() else activeTab.webView?.reload() }) {
-                            Icon(if (progress in 1..99) Icons.Default.Close else Icons.Default.Refresh, "Reload", tint = Cyan, modifier = Modifier.size(22.dp))
                         }
                         IconButton(onClick = { screen = "tabs" }) {
                             BadgedBox(badge = { Badge { Text(tabs.size.toString()) } }) {
