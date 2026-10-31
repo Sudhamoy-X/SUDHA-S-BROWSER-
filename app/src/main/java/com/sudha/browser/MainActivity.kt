@@ -189,6 +189,11 @@ private fun SudhaBrowserApp(context: Context) {
     var tabSearch by remember { mutableStateOf("") }
     var savedSearch by remember { mutableStateOf("") }
     var sortBookmarksAZ by remember { mutableStateOf(false) }
+    var showBookmarkEditDialog by remember { mutableStateOf(false) }
+    var bookmarkEditUrl by remember { mutableStateOf("") }
+    var bookmarkEditTitle by remember { mutableStateOf("") }
+    var showImportBookmarksDialog by remember { mutableStateOf(false) }
+    var importBookmarksText by remember { mutableStateOf("") }
     var nextTabId by remember { mutableIntStateOf(2) }
     var activeTabId by remember { mutableIntStateOf(1) }
     var address by remember { mutableStateOf("") }
