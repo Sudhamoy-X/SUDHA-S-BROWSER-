@@ -212,6 +212,9 @@ private fun SudhaBrowserApp(context: Context) {
     val customBookmarkFolders = remember { mutableStateListOf<String>().also { folders -> folders.addAll(prefs.getStringSet("bookmark_folders", emptySet())?.toList()?.sorted() ?: emptyList()) } }
     var showCreateBookmarkFolderDialog by remember { mutableStateOf(false) }
     var newBookmarkFolderName by remember { mutableStateOf("") }
+    var showManageBookmarkFoldersDialog by remember { mutableStateOf(false) }
+    var renameBookmarkFolderFrom by remember { mutableStateOf<String?>(null) }
+    var renameBookmarkFolderTo by remember { mutableStateOf("") }
     var bookmarkFolderMenuUrl by remember { mutableStateOf<String?>(null) }
     var showBookmarkEditDialog by remember { mutableStateOf(false) }
     var bookmarkEditUrl by remember { mutableStateOf("") }
@@ -909,6 +912,7 @@ private fun SudhaBrowserApp(context: Context) {
                             }
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
                                 TextButton(onClick = { newBookmarkFolderName = ""; showCreateBookmarkFolderDialog = true }) { Text("New folder +", color = Cyan) }
+                                TextButton(onClick = { showManageBookmarkFoldersDialog = true }) { Text("Manage folders", color = Cyan) }
                                 TextButton(onClick = { sortBookmarksAZ = !sortBookmarksAZ }) { Text(if (sortBookmarksAZ) "Sort: A–Z" else "Sort: Recent", color = Cyan) }
                                 TextButton(onClick = { importBookmarksText = ""; showImportBookmarksDialog = true }) { Text("Import", color = Cyan) }
                                 TextButton(onClick = {
@@ -1079,6 +1083,58 @@ private fun SudhaBrowserApp(context: Context) {
                         }) { Text("Save") }
                     },
                     dismissButton = { TextButton(onClick = { showBookmarkEditDialog = false }) { Text("Cancel") } }
+                )
+            }
+            if (showManageBookmarkFoldersDialog) {
+                AlertDialog(
+                    onDismissRequest = { showManageBookmarkFoldersDialog = false },
+                    title = { Text("Manage bookmark folders") },
+                    text = {
+                        if (customBookmarkFolders.isEmpty()) Text("No custom folders yet. Create one to manage it here.")
+                        else Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            customBookmarkFolders.toList().forEach { folder ->
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Column(Modifier.weight(1f)) {
+                                        Text(folder, color = Color.White)
+                                        Text("${bookmarks.count { it.folder == folder }} bookmarks", color = Color.Gray, style = MaterialTheme.typography.labelSmall)
+                                    }
+                                    TextButton(onClick = { renameBookmarkFolderFrom = folder; renameBookmarkFolderTo = folder; showManageBookmarkFoldersDialog = false }) { Text("Rename") }
+                                    TextButton(onClick = {
+                                        bookmarks.indices.forEach { index -> if (bookmarks[index].folder == folder) bookmarks[index] = bookmarks[index].copy(folder = "General") }
+                                        persist("bookmarks", bookmarks)
+                                        customBookmarkFolders.remove(folder)
+                                        prefs.edit().putStringSet("bookmark_folders", customBookmarkFolders.toSet()).apply()
+                                        if (selectedBookmarkFolder == folder) selectedBookmarkFolder = "All"
+                                    }) { Text("Delete", color = Color(0xFFFF7777)) }
+                                }
+                            }
+                        }
+                    },
+                    confirmButton = { TextButton(onClick = { showManageBookmarkFoldersDialog = false }) { Text("Done") } }
+                )
+            }
+            if (renameBookmarkFolderFrom != null) {
+                AlertDialog(
+                    onDismissRequest = { renameBookmarkFolderFrom = null },
+                    title = { Text("Rename folder") },
+                    text = { OutlinedTextField(value = renameBookmarkFolderTo, onValueChange = { renameBookmarkFolderTo = it }, singleLine = true, label = { Text("New folder name") }) },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            val oldName = renameBookmarkFolderFrom
+                            val newName = renameBookmarkFolderTo.trim().take(30)
+                            if (oldName != null && newName.isNotBlank() && newName.lowercase() != "all" && newName.lowercase() != "general" && (newName.equals(oldName, true) || (customBookmarkFolders.none { it.equals(newName, true) } && bookmarks.none { it.folder.equals(newName, true) }))) {
+                                bookmarks.indices.forEach { index -> if (bookmarks[index].folder == oldName) bookmarks[index] = bookmarks[index].copy(folder = newName) }
+                                persist("bookmarks", bookmarks)
+                                val folderIndex = customBookmarkFolders.indexOf(oldName)
+                                if (folderIndex >= 0) customBookmarkFolders[folderIndex] = newName
+                                prefs.edit().putStringSet("bookmark_folders", customBookmarkFolders.toSet()).apply()
+                                if (selectedBookmarkFolder == oldName) selectedBookmarkFolder = newName
+                            }
+                            renameBookmarkFolderFrom = null
+                            showManageBookmarkFoldersDialog = true
+                        }, enabled = renameBookmarkFolderTo.trim().isNotBlank()) { Text("Save") }
+                    },
+                    dismissButton = { TextButton(onClick = { renameBookmarkFolderFrom = null; showManageBookmarkFoldersDialog = true }) { Text("Cancel") } }
                 )
             }
             if (showCreateBookmarkFolderDialog) {
