@@ -96,7 +96,7 @@ private val SurfaceBlue = Color(0xFF111A2B)
 private val ElectricBlue = Color(0xFF398BFF)
 private val Cyan = Color(0xFF45D7F5)
 
-private data class BrowserTab(val id: Int, var url: String = "", var title: String = "New tab", var webView: WebView? = null)
+private data class BrowserTab(val id: Int, var url: String = "", var title: String = "New tab", var webView: WebView? = null, var group: String = "Ungrouped")
 private data class SavedPage(val title: String, val url: String)
 private data class DownloadEntry(val id: Long, val title: String, val status: String, val downloaded: Long, val total: Long, val reason: Int, val uri: Uri?)
 
@@ -194,7 +194,7 @@ private fun SudhaBrowserApp(context: Context) {
                     val item = array.optJSONObject(index) ?: return@mapNotNull null
                     val url = item.optString("url")
                     if (url.isBlank()) BrowserTab(item.optInt("id", index + 1))
-                    else BrowserTab(item.optInt("id", index + 1), url, item.optString("title", url))
+                    else BrowserTab(item.optInt("id", index + 1), url, item.optString("title", url), group = item.optString("group", "Ungrouped"))
                 }
             }.getOrDefault(emptyList())
             restored.addAll(saved.ifEmpty { listOf(BrowserTab(1)) })
@@ -202,6 +202,8 @@ private fun SudhaBrowserApp(context: Context) {
     }
     val recentlyClosedTabs = remember { mutableStateListOf<SavedPage>().also { it.addAll(readList("recently_closed_tabs").take(10)) } }
     var tabSearch by remember { mutableStateOf("") }
+    var selectedTabGroup by remember { mutableStateOf("All") }
+    var groupMenuTabId by remember { mutableStateOf<Int?>(null) }
     var savedSearch by remember { mutableStateOf("") }
     var sortBookmarksAZ by remember { mutableStateOf(false) }
     var showBookmarkEditDialog by remember { mutableStateOf(false) }
@@ -297,7 +299,7 @@ private fun SudhaBrowserApp(context: Context) {
     fun persistSession() {
         val array = JSONArray()
         tabs.forEach { tab ->
-            array.put(JSONObject().put("id", tab.id).put("title", tab.title).put("url", tab.url))
+            array.put(JSONObject().put("id", tab.id).put("title", tab.title).put("url", tab.url).put("group", tab.group))
         }
         prefs.edit().putString("open_tabs", array.toString()).putInt("active_tab_id", activeTabId).apply()
     }
@@ -843,6 +845,11 @@ private fun SudhaBrowserApp(context: Context) {
                     "tabs" -> Column(Modifier.weight(1f).fillMaxWidth()) {
                         Column(Modifier.fillMaxWidth().padding(horizontal = 14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             OutlinedTextField(value = tabSearch, onValueChange = { tabSearch = it }, modifier = Modifier.fillMaxWidth(), singleLine = true, placeholder = { Text("Search open tabs") }, leadingIcon = { Icon(Icons.Default.Search, null) })
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                listOf("All", "Personal", "Work", "Shopping", "Ungrouped").forEach { group ->
+                                    FilterChip(selected = selectedTabGroup == group, onClick = { selectedTabGroup = group }, label = { Text(group, maxLines = 1) })
+                                }
+                            }
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                 OutlinedButton(onClick = { reopenLastClosedTab() }, enabled = recentlyClosedTabs.isNotEmpty(), modifier = Modifier.weight(1f)) { Text("Reopen closed") }
                                 OutlinedButton(onClick = { duplicateActiveTab() }, enabled = activeTab.url.isNotBlank(), modifier = Modifier.weight(1f)) { Text("Duplicate") }
@@ -854,9 +861,25 @@ private fun SudhaBrowserApp(context: Context) {
                             if (recentlyClosedTabs.isNotEmpty()) Text("Recently closed: ${recentlyClosedTabs.first().title}", color = Color.Gray, style = MaterialTheme.typography.bodySmall, maxLines = 1)
                         }
                         LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                            items(tabs.filter { tabSearch.isBlank() || it.title.contains(tabSearch, true) || it.url.contains(tabSearch, true) }, key = { it.id }) { tab ->
-                            Row(Modifier.fillMaxWidth().background(if (tab.id == activeTabId) Color(0xFF172B48) else SurfaceBlue, RoundedCornerShape(16.dp)).clickable { activeTabId = tab.id; address = tab.url; screen = "browser"; showHomeDashboard = tab.url.isBlank(); persistSession() }.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-                                Column(Modifier.weight(1f)) { Text(tab.title, color = Color.White, maxLines = 1); Text(tab.url, color = Color.LightGray, maxLines = 1, style = MaterialTheme.typography.bodySmall) }
+                            items(tabs.filter { (selectedTabGroup == "All" || it.group == selectedTabGroup) && (tabSearch.isBlank() || it.title.contains(tabSearch, true) || it.url.contains(tabSearch, true)) }, key = { it.id }) { tab ->
+                            Row(Modifier.fillMaxWidth().background(if (tab.id == activeTabId) Color(0xFF172B48) else SurfaceBlue, RoundedCornerShape(16.dp)).clickable { activeTabId = tab.id; address = tab.url; screen = "browser"; showHomeDashboard = tab.url.isBlank(); persistSession() }.padding(start = 14.dp, end = 6.dp, top = 10.dp, bottom = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Column(Modifier.weight(1f)) {
+                                    Text(tab.title, color = Color.White, maxLines = 1)
+                                    Text(tab.url, color = Color.LightGray, maxLines = 1, style = MaterialTheme.typography.bodySmall)
+                                    Text(tab.group, color = Cyan, style = MaterialTheme.typography.labelSmall)
+                                }
+                                Box {
+                                    IconButton(onClick = { groupMenuTabId = tab.id }) { Icon(Icons.Default.MoreVert, "Change tab group", tint = Color.LightGray) }
+                                    DropdownMenu(expanded = groupMenuTabId == tab.id, onDismissRequest = { groupMenuTabId = null }) {
+                                        listOf("Personal", "Work", "Shopping", "Ungrouped").forEach { group ->
+                                            DropdownMenuItem(text = { Text(if (tab.group == group) "✓ $group" else group) }, onClick = {
+                                                tab.group = group
+                                                groupMenuTabId = null
+                                                persistSession()
+                                            })
+                                        }
+                                    }
+                                }
                                 IconButton(onClick = { closeTab(tab.id) }) { Icon(Icons.Default.Close, "Close tab", tint = Color.LightGray) }
                             }
                         }
