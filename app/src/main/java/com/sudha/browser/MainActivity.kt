@@ -277,7 +277,7 @@ private fun SudhaBrowserApp(context: Context) {
 
     MaterialTheme(colorScheme = darkColorScheme(primary = ElectricBlue, secondary = Cyan, background = Midnight, surface = SurfaceBlue)) {
         Column(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFF050A18), Color(0xFF08152C), Color(0xFF050914)))).statusBarsPadding()) {
-            Column(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 8.dp)) {
+            if (screen != "browser" || !showHomeDashboard) Column(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 8.dp)) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     SudhaBrandMark(Modifier.size(54.dp))
                     Spacer(Modifier.width(10.dp))
@@ -329,10 +329,10 @@ private fun SudhaBrowserApp(context: Context) {
                         Spacer(Modifier.height(18.dp))
                         SudhaBrandMark(Modifier.size(112.dp))
                         Spacer(Modifier.height(10.dp))
-                        Text("SUDHA", color = Color.White, style = MaterialTheme.typography.headlineLarge, letterSpacing = androidx.compose.ui.unit.sp(8), fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
-                        Text("B R O W S E R", color = Cyan, style = MaterialTheme.typography.labelMedium, letterSpacing = androidx.compose.ui.unit.sp(5))
+                        Text("SUDHA", color = Color.White, style = MaterialTheme.typography.headlineLarge, letterSpacing = 8.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
+                        Text("B R O W S E R", color = Cyan, style = MaterialTheme.typography.labelMedium, letterSpacing = 5.sp)
                         Spacer(Modifier.height(7.dp))
-                        Text("FASTER  •  SAFER  •  TOGETHER", color = Color(0xFF9AB9E4), style = MaterialTheme.typography.labelSmall, letterSpacing = androidx.compose.ui.unit.sp(1.5))
+                        Text("FASTER  •  SAFER  •  TOGETHER", color = Color(0xFF9AB9E4), style = MaterialTheme.typography.labelSmall, letterSpacing = 1.5.sp)
                         Spacer(Modifier.height(24.dp))
                         Row(Modifier.fillMaxWidth().background(Brush.horizontalGradient(listOf(Color(0xFF142747), Color(0xFF101A33))), RoundedCornerShape(22.dp)).border(1.dp, Color(0xFF28518A), RoundedCornerShape(22.dp)).padding(start = 14.dp, end = 6.dp, top = 5.dp, bottom = 5.dp), verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Default.Search, null, tint = Cyan, modifier = Modifier.size(24.dp)); Spacer(Modifier.width(8.dp))
@@ -352,7 +352,7 @@ private fun SudhaBrowserApp(context: Context) {
                             }
                         }
                         Spacer(Modifier.height(22.dp))
-                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) { Text("QUICK ACCESS", color = Color.White, style = MaterialTheme.typography.titleSmall, letterSpacing = androidx.compose.ui.unit.sp(1.5)); Spacer(Modifier.weight(1f)); Text("Crafted by Sudhamoy", color = Color(0xFF7EA6D8), style = MaterialTheme.typography.labelSmall) }
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) { Text("QUICK ACCESS", color = Color.White, style = MaterialTheme.typography.titleSmall, letterSpacing = 1.5.sp); Spacer(Modifier.weight(1f)); Text("Crafted by Sudhamoy", color = Color(0xFF7EA6D8), style = MaterialTheme.typography.labelSmall) }
                         Spacer(Modifier.height(10.dp))
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
                             listOf(Triple("Saved", "bookmarks", Color(0xFF4CBFFF)), Triple("History", "history", Color(0xFFB17BFF)), Triple("Downloads", "downloads", Color(0xFF52D6B0)), Triple("Settings", "settings", Color(0xFFFFB86B))).forEach { item ->
