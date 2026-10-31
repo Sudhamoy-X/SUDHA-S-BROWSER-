@@ -34,6 +34,9 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.foundation.border
 import androidx.compose.foundation.background
 import androidx.compose.ui.graphics.StrokeCap
@@ -148,15 +151,14 @@ private fun SudhaBrandMark(modifier: Modifier = Modifier) {
                 .background(Brush.radialGradient(listOf(Color(0xFF182A70).copy(alpha = 0.65f), Color(0xFF080F27).copy(alpha = 0.1f))), CircleShape),
             contentAlignment = Alignment.Center
         ) {
-            Text(
-                "S",
-                color = Color.White,
-                style = MaterialTheme.typography.headlineLarge,
-                fontWeight = androidx.compose.ui.text.font.FontWeight.Light,
-                modifier = Modifier.graphicsLayer {
-                    shadowElevation = 9f
-                    scaleX = 1.04f
-                    scaleY = 1.04f
+            Image(
+                painter = painterResource(id = R.drawable.sudha_exact_app_icon),
+                contentDescription = "SUDHA Browser logo",
+                contentScale = ContentScale.Fit,
+                modifier = Modifier.fillMaxSize(0.76f).graphicsLayer {
+                    shadowElevation = 18f
+                    scaleX = 1.03f
+                    scaleY = 1.03f
                 }
             )
         }
@@ -278,6 +280,7 @@ private fun SudhaBrowserApp(context: Context) {
         }
     }
     fun saveBookmark() {
+        if (activeTab.url.isBlank()) return
         val item = SavedPage(activeTab.title, activeTab.url)
         if (bookmarks.none { it.url == item.url }) { bookmarks.add(0, item); persist("bookmarks", bookmarks) }
     }
@@ -418,6 +421,15 @@ private fun SudhaBrowserApp(context: Context) {
                                 downloadManager.enqueue(request)
                             }
                             webViewClient = object : WebViewClient() {
+                                override fun shouldOverrideUrlLoading(view: WebView?, request: android.webkit.WebResourceRequest?): Boolean {
+                                    val target = request?.url ?: return false
+                                    val scheme = target.scheme?.lowercase() ?: return false
+                                    if (scheme == "http" || scheme == "https") return false
+                                    return runCatching {
+                                        context.startActivity(Intent(Intent.ACTION_VIEW, target).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                                        true
+                                    }.getOrDefault(true)
+                                }
                                 override fun shouldInterceptRequest(view: WebView?, request: android.webkit.WebResourceRequest?): android.webkit.WebResourceResponse? {
                                     val requestUrl = request?.url?.toString() ?: return null
                                     if (BrowserContentFilter.isBlocked(requestUrl)) {
@@ -426,11 +438,11 @@ private fun SudhaBrowserApp(context: Context) {
                                     }
                                     return super.shouldInterceptRequest(view, request)
                                 }
-                                override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) { if (url != null) { activeTab.url = url; address = url } }
+                                override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) { if (url != null) { activeTab.url = url; if (activeTab.id == activeTabId) address = url } }
                                 override fun onPageFinished(view: WebView?, url: String?) {
                                     if (readerMode) view?.evaluateJavascript("(function(){var s=document.getElementById('sudha-reader-style');if(!s){s=document.createElement('style');s.id='sudha-reader-style';document.head.appendChild(s);}s.textContent='body{max-width:780px!important;margin:24px auto!important;padding:24px!important;font-family:Georgia,serif!important;font-size:20px!important;line-height:1.8!important;background:#f5f1e8!important;color:#242424!important}';})();", null)
                                     if (url != null) {
-                                        activeTab.url = url; activeTab.title = view?.title?.takeIf { it.isNotBlank() } ?: url; address = url
+                                        activeTab.url = url; activeTab.title = view?.title?.takeIf { it.isNotBlank() } ?: url; if (activeTab.id == activeTabId) address = url
                                         val item = SavedPage(activeTab.title, url)
                                         history.removeAll { it.url == url }; history.add(0, item)
                                         while (history.size > 500) history.removeAt(history.lastIndex)
