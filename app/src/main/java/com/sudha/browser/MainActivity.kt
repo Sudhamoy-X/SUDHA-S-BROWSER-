@@ -214,10 +214,10 @@ private fun SudhaBrowserApp(context: Context) {
     var importBookmarksText by remember { mutableStateOf("") }
     var nextTabId by remember { mutableIntStateOf((tabs.maxOfOrNull { it.id } ?: 0) + 1) }
     var activeTabId by remember { mutableIntStateOf(prefs.getInt("active_tab_id", tabs.first().id).takeIf { id -> tabs.any { it.id == id } } ?: tabs.first().id) }
-    var address by remember { mutableStateOf("") }
+    var address by remember { mutableStateOf(tabs.firstOrNull { it.id == activeTabId }?.url ?: "") }
     var progress by remember { mutableIntStateOf(0) }
     var screen by remember { mutableStateOf("browser") }
-    var showHomeDashboard by remember { mutableStateOf(true) }
+    var showHomeDashboard by remember { mutableStateOf(tabs.firstOrNull { it.id == activeTabId }?.url.isNullOrBlank()) }
     var adsEnabled by remember { mutableStateOf(prefs.getBoolean("block_ads", true)) }
     var trackingEnabled by remember { mutableStateOf(prefs.getBoolean("block_trackers", true)) }
     var desktopMode by remember { mutableStateOf(prefs.getBoolean("desktop_mode", false)) }
@@ -479,7 +479,7 @@ private fun SudhaBrowserApp(context: Context) {
                                     if (activeTab.url.startsWith("http")) {
                                         val sourceUrl = "view-source:" + activeTab.url
                                         val sourceTab = BrowserTab(nextTabId++, sourceUrl, "Page source")
-                                        tabs.add(sourceTab); activeTabId = sourceTab.id; address = sourceUrl; showHomeDashboard = false
+                                        tabs.add(sourceTab); activeTabId = sourceTab.id; address = sourceUrl; showHomeDashboard = false; persistSession()
                                     }
                                 })
                                 DropdownMenuItem(text = { Text("Copy website domain") }, onClick = {
@@ -901,7 +901,7 @@ private fun SudhaBrowserApp(context: Context) {
                         }
                         LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                             items(tabs.filter { tabSearch.isBlank() || it.title.contains(tabSearch, true) || it.url.contains(tabSearch, true) }, key = { it.id }) { tab ->
-                            Row(Modifier.fillMaxWidth().background(if (tab.id == activeTabId) Color(0xFF172B48) else SurfaceBlue, RoundedCornerShape(16.dp)).clickable { activeTabId = tab.id; address = tab.url; screen = "browser"; showHomeDashboard = tab.url.isBlank() }.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Row(Modifier.fillMaxWidth().background(if (tab.id == activeTabId) Color(0xFF172B48) else SurfaceBlue, RoundedCornerShape(16.dp)).clickable { activeTabId = tab.id; address = tab.url; screen = "browser"; showHomeDashboard = tab.url.isBlank(); persistSession() }.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
                                 Column(Modifier.weight(1f)) { Text(tab.title, color = Color.White, maxLines = 1); Text(tab.url, color = Color.LightGray, maxLines = 1, style = MaterialTheme.typography.bodySmall) }
                                 IconButton(onClick = { closeTab(tab.id) }) { Icon(Icons.Default.Close, "Close tab", tint = Color.LightGray) }
                             }
