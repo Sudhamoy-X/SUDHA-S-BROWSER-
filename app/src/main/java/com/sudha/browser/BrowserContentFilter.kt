@@ -12,14 +12,23 @@ object BrowserContentFilter {
         "doubleclick.net", "googlesyndication.com", "googleadservices.com",
         "adnxs.com", "adform.net", "taboola.com",
         "outbrain.com", "popads.net", "popcash.net", "zedo.com",
-        "adroll.com", "criteo.com", "rubiconproject.com"
+        "adroll.com", "criteo.com", "rubiconproject.com",
+        "amazon-adsystem.com", "advertising.com", "serving-sys.com",
+        "casalemedia.com", "openx.net", "pubmatic.com",
+        "smartadserver.com", "sharethrough.com", "yieldmo.com",
+        "adsrvr.org", "bidswitch.net", "lijit.com", "33across.com",
+        "adservice.google.com", "ads-twitter.com", "ads.linkedin.com"
     )
     private val blockedTrackers = setOf(
         "scorecardresearch.com", "quantserve.com", "hotjar.com",
         "mixpanel.com", "segment.io", "segment.com", "amplitude.com",
         "clarity.ms", "branch.io", "appsflyer.com", "adjust.com",
         "facebook.net", "connect.facebook.net", "analytics.google.com",
-        "google-analytics.com", "googletagmanager.com"
+        "google-analytics.com", "googletagmanager.com",
+        "pixel.facebook.com", "bat.bing.com", "mc.yandex.ru",
+        "stats.wp.com", "hotjar.io", "logrocket.io",
+        "fullstory.com", "mouseflow.com", "luckyorange.com",
+        "newrelic.com", "nr-data.net", "heap.io"
     )
 
     val blockedRequestCount = AtomicInteger(0)
