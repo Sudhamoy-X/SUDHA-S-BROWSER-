@@ -476,20 +476,6 @@ private fun SudhaBrowserApp(context: Context) {
                         }
                     }
                 }
-                if (showHomeDashboard && prefs.getBoolean("show_shortcuts", true)) {
-                    Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
-                        listOf("Google" to "https://www.google.com", "YouTube" to "https://m.youtube.com", "Gmail" to "https://mail.google.com", "Maps" to "https://maps.google.com").forEachIndexed { index, item ->
-                            val tint = listOf(Color(0xFF55B7FF), Color(0xFFFF5577), Color(0xFFFF657D), Color(0xFF55D6B0))[index]
-                            Column(Modifier.weight(1f).background(Brush.verticalGradient(listOf(Color(0xFF142541), Color(0xFF0B1426))), RoundedCornerShape(18.dp)).border(1.dp, Color(0xFF294B7A), RoundedCornerShape(18.dp)).clickable { navigate(item.second) }.padding(vertical = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                                Box(Modifier.size(34.dp).background(tint.copy(alpha = 0.14f), CircleShape), contentAlignment = Alignment.Center) {
-                                    Text(item.first.take(1), color = tint, style = MaterialTheme.typography.titleMedium)
-                                }
-                                Spacer(Modifier.height(5.dp))
-                                Text(item.first, color = Color(0xFFD7E8FF), style = MaterialTheme.typography.labelSmall, maxLines = 1)
-                            }
-                        }
-                    }
-                }
                 if (!showHomeDashboard && showFindBar) Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                     TextField(value = findText, onValueChange = { findText = it; activeTab.webView?.findAllAsync(it) }, modifier = Modifier.weight(1f), placeholder = { Text("Find on page") }, singleLine = true)
                     TextButton(onClick = { activeTab.webView?.findAllAsync(findText); activeTab.webView?.findNext(true) }) { Text("Find") }
