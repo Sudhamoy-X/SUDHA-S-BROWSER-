@@ -375,45 +375,37 @@ private fun SudhaBrowserApp(context: Context) {
                 }
                 if (!showHomeDashboard) {
                     Row(
-                        Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 2.dp),
+                        Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 1.dp),
                         horizontalArrangement = Arrangement.SpaceEvenly,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         IconButton(onClick = { activeTab.webView?.goBack() }, enabled = activeTab.webView?.canGoBack() == true) {
-                            Icon(Icons.Default.ArrowBack, "Go back", tint = if (activeTab.webView?.canGoBack() == true) Color.White else Color.Gray)
+                            Icon(Icons.Default.ArrowBack, "Back", tint = if (activeTab.webView?.canGoBack() == true) Color.White else Color.Gray)
                         }
                         IconButton(onClick = { activeTab.webView?.goForward() }, enabled = activeTab.webView?.canGoForward() == true) {
-                            Icon(Icons.Default.ArrowForward, "Go forward", tint = if (activeTab.webView?.canGoForward() == true) Color.White else Color.Gray)
+                            Icon(Icons.Default.ArrowForward, "Forward", tint = if (activeTab.webView?.canGoForward() == true) Color.White else Color.Gray)
                         }
                         IconButton(onClick = { if (progress in 1..99) activeTab.webView?.stopLoading() else activeTab.webView?.reload() }) {
-                            Icon(if (progress in 1..99) Icons.Default.Close else Icons.Default.Refresh, if (progress in 1..99) "Stop loading" else "Reload page", tint = Cyan)
+                            Icon(if (progress in 1..99) Icons.Default.Close else Icons.Default.Refresh, "Reload", tint = Cyan)
                         }
-                        IconButton(onClick = { saveBookmark() }) {
-                            Icon(Icons.Default.Bookmark, "Save bookmark", tint = Cyan)
-                        }
-                        IconButton(onClick = {
-                            val url = activeTab.url
-                            if (url.isNotBlank()) runCatching {
-                                context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, url), "Share page"))
-                            }
-                        }) { Icon(Icons.Default.Share, "Share page", tint = Color.White) }
-                        IconButton(onClick = { showFindBar = !showFindBar; findText = "" }) {
-                            Icon(Icons.Default.FindInPage, "Find in page", tint = Color.White)
-                        }
-                        IconButton(onClick = {
-                            val url = activeTab.url
-                            if (url.isNotBlank()) {
-                                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                                clipboard.setPrimaryClip(ClipData.newPlainText("Page URL", url))
-                            }
-                        }) { Icon(Icons.Default.ContentCopy, "Copy link", tint = Color.White) }
-                        IconButton(onClick = { addTab() }) { Icon(Icons.Default.Add, "New tab", tint = Color.White) }
-                        IconButton(onClick = { showHomeDashboard = true; address = "" }) {
-                            Icon(Icons.Default.Home, "Home page", tint = Color.White)
+                        IconButton(onClick = { saveBookmark() }) { Icon(Icons.Default.Bookmark, "Bookmark", tint = Cyan) }
+                        IconButton(onClick = { screen = "tabs" }) {
+                            BadgedBox(badge = { Badge { Text(tabs.size.toString()) } }) { Icon(Icons.Default.Tab, "Tabs", tint = Color.White) }
                         }
                         Box {
-                            IconButton(onClick = { showPageTools = true }) { Icon(Icons.Default.MoreVert, "More page tools", tint = Cyan) }
+                            IconButton(onClick = { showPageTools = true }) { Icon(Icons.Default.MoreVert, "Page menu", tint = Cyan) }
                             DropdownMenu(expanded = showPageTools, onDismissRequest = { showPageTools = false }) {
+                                DropdownMenuItem(text = { Text("Share page") }, onClick = {
+                                    showPageTools = false
+                                    if (activeTab.url.isNotBlank()) runCatching { context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, activeTab.url), "Share page")) }
+                                })
+                                DropdownMenuItem(text = { Text("Find in page") }, onClick = { showPageTools = false; showFindBar = true; findText = "" })
+                                DropdownMenuItem(text = { Text("Copy page link") }, onClick = {
+                                    showPageTools = false
+                                    if (activeTab.url.isNotBlank()) (context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("Page URL", activeTab.url))
+                                })
+                                DropdownMenuItem(text = { Text("New tab") }, onClick = { showPageTools = false; addTab() })
+                                DropdownMenuItem(text = { Text("Home") }, onClick = { showPageTools = false; showHomeDashboard = true; address = "" })
                                 DropdownMenuItem(text = { Text("Translate page to English") }, onClick = {
                                     showPageTools = false
                                     if (activeTab.url.startsWith("http")) navigate("https://translate.google.com/translate?sl=auto&tl=en&u=" + Uri.encode(activeTab.url))
@@ -486,13 +478,13 @@ private fun SudhaBrowserApp(context: Context) {
                 if (showHomeDashboard) {
                     Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(androidx.compose.foundation.rememberScrollState()).padding(horizontal = 18.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                         Spacer(Modifier.height(18.dp))
-                        SudhaBrandMark(Modifier.size(112.dp))
+                        SudhaBrandMark(Modifier.size(88.dp))
                         Spacer(Modifier.height(10.dp))
                         Text("SUDHA", color = Color.White, style = MaterialTheme.typography.headlineLarge, letterSpacing = 8.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
                         Text("B R O W S E R", color = Cyan, style = MaterialTheme.typography.labelMedium, letterSpacing = 5.sp)
                         Spacer(Modifier.height(7.dp))
                         Text("FASTER  •  SAFER  •  TOGETHER", color = Color(0xFF9AB9E4), style = MaterialTheme.typography.labelSmall, letterSpacing = 1.5.sp)
-                        Spacer(Modifier.height(24.dp))
+                        Spacer(Modifier.height(16.dp))
                         Row(Modifier.fillMaxWidth().background(Brush.horizontalGradient(listOf(Color(0xFF142747), Color(0xFF101A33))), RoundedCornerShape(22.dp)).border(1.dp, Color(0xFF28518A), RoundedCornerShape(22.dp)).padding(start = 14.dp, end = 6.dp, top = 5.dp, bottom = 5.dp), verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Default.Search, null, tint = Cyan, modifier = Modifier.size(24.dp)); Spacer(Modifier.width(8.dp))
                             TextField(value = address, onValueChange = { address = it }, modifier = Modifier.weight(1f), placeholder = { Text("Search or type URL", color = Color(0xFF9BAFCB)) }, singleLine = true, colors = TextFieldDefaults.colors(focusedTextColor = Color.White, unfocusedTextColor = Color.White, focusedContainerColor = Color.Transparent, unfocusedContainerColor = Color.Transparent, focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent, cursorColor = Cyan), keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go), keyboardActions = KeyboardActions(onGo = { navigate(address) }))
@@ -520,11 +512,6 @@ private fun SudhaBrowserApp(context: Context) {
                                     Spacer(Modifier.height(5.dp)); Text(item.first, color = Color(0xFFD7E8FF), style = MaterialTheme.typography.labelSmall, maxLines = 1)
                                 }
                             }
-                        }
-                        Spacer(Modifier.height(18.dp))
-                        Row(Modifier.fillMaxWidth().background(Brush.horizontalGradient(listOf(Color(0xFF0D1E3A), Color(0xFF17113A))), RoundedCornerShape(18.dp)).border(1.dp, Color(0xFF273F77), RoundedCornerShape(18.dp)).padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Column(Modifier.weight(1f)) { Text("YOUR WEB. YOUR WAY.", color = Color.White, style = MaterialTheme.typography.titleSmall); Text("A cleaner, faster browsing space.", color = Color(0xFF9CB8DC), style = MaterialTheme.typography.bodySmall) }
-                            SudhaBrandMark(Modifier.size(48.dp))
                         }
                         Spacer(Modifier.height(14.dp))
                     }
@@ -1053,12 +1040,14 @@ private fun SudhaBrowserApp(context: Context) {
                     dismissButton = { TextButton(onClick = { showClearDataDialog = false }) { Text("Cancel") } }
                 )
             }
-            Row(Modifier.fillMaxWidth().navigationBarsPadding().background(Brush.verticalGradient(listOf(Color(0xFF101D35), Color(0xFF080F20)))).border(1.dp, Color(0xFF1D3B66)).padding(horizontal = 4.dp, vertical = 5.dp), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
-                NavigationBarItem(selected = screen == "browser" && showHomeDashboard, onClick = { screen = "browser"; showHomeDashboard = true; address = "" }, icon = { Icon(Icons.Default.Home, null) }, label = { Text("Home") })
-                NavigationBarItem(selected = screen == "bookmarks", onClick = { screen = "bookmarks" }, icon = { Icon(Icons.Default.Bookmark, null) }, label = { Text("Saved") })
-                NavigationBarItem(selected = screen == "history", onClick = { screen = "history" }, icon = { Icon(Icons.Default.History, null) }, label = { Text("History") })
-                NavigationBarItem(selected = screen == "downloads", onClick = { screen = "downloads" }, icon = { Icon(Icons.Default.Download, null) }, label = { Text("Downloads") })
-                NavigationBarItem(selected = screen == "tabs", onClick = { screen = "tabs" }, icon = { Icon(Icons.Default.Tab, null) }, label = { Text("Tabs") })
+            if (screen != "browser" || showHomeDashboard) {
+                Row(Modifier.fillMaxWidth().navigationBarsPadding().background(Brush.verticalGradient(listOf(Color(0xFF101D35), Color(0xFF080F20)))).border(1.dp, Color(0xFF1D3B66)).padding(horizontal = 4.dp, vertical = 5.dp), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
+                    NavigationBarItem(selected = screen == "browser" && showHomeDashboard, onClick = { screen = "browser"; showHomeDashboard = true; address = "" }, icon = { Icon(Icons.Default.Home, null) }, label = { Text("Home") })
+                    NavigationBarItem(selected = screen == "bookmarks", onClick = { screen = "bookmarks" }, icon = { Icon(Icons.Default.Bookmark, null) }, label = { Text("Saved") })
+                    NavigationBarItem(selected = screen == "history", onClick = { screen = "history" }, icon = { Icon(Icons.Default.History, null) }, label = { Text("History") })
+                    NavigationBarItem(selected = screen == "downloads", onClick = { screen = "downloads" }, icon = { Icon(Icons.Default.Download, null) }, label = { Text("Downloads") })
+                    NavigationBarItem(selected = screen == "tabs", onClick = { screen = "tabs" }, icon = { Icon(Icons.Default.Tab, null) }, label = { Text("Tabs") })
+                }
             }
         }
     }
