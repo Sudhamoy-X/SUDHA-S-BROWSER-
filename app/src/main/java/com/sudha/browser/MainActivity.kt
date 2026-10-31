@@ -257,6 +257,8 @@ private fun SudhaBrowserApp(context: Context) {
     BrowserContentFilter.adsEnabled = adsEnabled
     BrowserContentFilter.trackingEnabled = trackingEnabled
     var downloads by remember { mutableStateOf<List<DownloadEntry>>(emptyList()) }
+    var downloadSearch by remember { mutableStateOf("") }
+    var downloadFilter by remember { mutableStateOf("All") }
     val downloadManager = remember { context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager }
 
     fun refreshDownloads() {
@@ -925,17 +927,56 @@ private fun SudhaBrowserApp(context: Context) {
                         }
                     }
                     "downloads" -> {
-                        if (downloads.isEmpty()) {
+                        Column(Modifier.fillMaxWidth().padding(horizontal = 14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            OutlinedTextField(
+                                value = downloadSearch,
+                                onValueChange = { downloadSearch = it },
+                                modifier = Modifier.fillMaxWidth(),
+                                singleLine = true,
+                                placeholder = { Text("Search downloads") },
+                                leadingIcon = { Icon(Icons.Default.Search, null) }
+                            )
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                                listOf("All", "Active", "Completed", "Failed").forEach { filter ->
+                                    FilterChip(
+                                        selected = downloadFilter == filter,
+                                        onClick = { downloadFilter = filter },
+                                        label = { Text(filter) }
+                                    )
+                                }
+                            }
+                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                Text("${downloads.size} files", color = Color.Gray, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
+                                TextButton(
+                                    onClick = {
+                                        downloads.filter { it.status == "Completed" }.forEach { downloadManager.remove(it.id) }
+                                        refreshDownloads()
+                                    },
+                                    enabled = downloads.any { it.status == "Completed" }
+                                ) { Text("Clear completed", color = Cyan) }
+                                IconButton(onClick = { refreshDownloads() }) { Icon(Icons.Default.Refresh, "Refresh downloads", tint = Cyan) }
+                            }
+                        }
+                        val visibleDownloads = downloads.filter { item ->
+                            val matchesFilter = when (downloadFilter) {
+                                "Active" -> item.status == "Downloading" || item.status == "Waiting" || item.status.startsWith("Paused")
+                                "Completed" -> item.status == "Completed"
+                                "Failed" -> item.status == "Failed"
+                                else -> true
+                            }
+                            matchesFilter && (downloadSearch.isBlank() || item.title.contains(downloadSearch, true))
+                        }
+                        if (visibleDownloads.isEmpty()) {
                             Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                     Icon(Icons.Default.Download, null, tint = Cyan, modifier = Modifier.size(36.dp))
-                                    Text("No downloads yet", color = Color.LightGray)
+                                    Text(if (downloads.isEmpty()) "No downloads yet" else "No matching downloads", color = Color.LightGray)
                                     Text("Files downloaded in the browser appear here.", color = Color.Gray, style = MaterialTheme.typography.bodySmall)
                                 }
                             }
                         } else {
                             LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                                items(downloads, key = { it.id }) { item ->
+                                items(visibleDownloads, key = { it.id }) { item ->
                                     Column(Modifier.fillMaxWidth().background(SurfaceBlue, RoundedCornerShape(16.dp)).padding(14.dp)) {
                                         Row(verticalAlignment = Alignment.CenterVertically) {
                                             Icon(Icons.Default.Download, null, tint = Cyan)
