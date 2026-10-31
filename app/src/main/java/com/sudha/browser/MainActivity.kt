@@ -192,7 +192,20 @@ private fun SudhaBrowserApp(context: Context) {
         Column(Modifier.fillMaxSize().background(Midnight).statusBarsPadding()) {
             Column(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 8.dp)) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.size(42.dp).background(Brush.linearGradient(listOf(ElectricBlue, Color(0xFF6548D8), Cyan)), RoundedCornerShape(14.dp)), contentAlignment = Alignment.Center) { Text("S", color = Color.White, style = MaterialTheme.typography.headlineMedium) }
+                    Box(
+                        Modifier.size(52.dp).background(
+                            Brush.linearGradient(listOf(Color(0xFF24D9FF), Color(0xFF245CFF), Color(0xFF713BFF), Color(0xFF20D9F2))),
+                            CircleShape
+                        ).padding(2.dp).background(
+                            Brush.linearGradient(listOf(Color(0xFF182B65), Color(0xFF5125C8), Color(0xFF087EBD))),
+                            CircleShape
+                        ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Box(Modifier.size(39.dp).background(Brush.linearGradient(listOf(Color(0xFF765BFF), Color(0xFF263DCA), Color(0xFF16C8E8))), CircleShape), contentAlignment = Alignment.Center) {
+                            Text("S", color = Color.White, style = MaterialTheme.typography.headlineLarge)
+                        }
+                    }
                     Spacer(Modifier.width(10.dp))
                     Column(Modifier.weight(1f)) {
                         Text("SUDHA BROWSER", color = Color.White, style = MaterialTheme.typography.titleMedium, maxLines = 1, softWrap = false)
