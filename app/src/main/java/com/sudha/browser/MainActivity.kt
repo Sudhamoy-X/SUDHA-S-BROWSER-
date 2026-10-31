@@ -259,7 +259,7 @@ private fun SudhaBrowserApp(context: Context) {
                                             Spacer(Modifier.height(8.dp))
                                             val fraction = if (item.total > 0L) (item.downloaded.toFloat() / item.total.toFloat()).coerceIn(0f, 1f) else 0f
                                             LinearProgressIndicator(progress = { fraction }, modifier = Modifier.fillMaxWidth(), color = ElectricBlue, trackColor = Midnight)
-                                            Text(if (item.total > 0L) "\${item.downloaded / 1024} KB / \${item.total / 1024} KB" else "\${item.downloaded / 1024} KB downloaded", color = Color.LightGray, style = MaterialTheme.typography.labelSmall)
+                                            Text(if (item.total > 0L) "${item.downloaded / 1024} KB / ${item.total / 1024} KB" else "${item.downloaded / 1024} KB downloaded", color = Color.LightGray, style = MaterialTheme.typography.labelSmall)
                                         } else if (item.status == "Completed") {
                                             Text("Ready to open", color = Color.LightGray, style = MaterialTheme.typography.labelSmall)
                                             TextButton(onClick = {
@@ -271,7 +271,7 @@ private fun SudhaBrowserApp(context: Context) {
                                                 }
                                             }) { Text("Open file", color = Cyan) }
                                         } else if (item.status == "Failed") {
-                                            Text("Error code: \${item.reason}", color = Color.LightGray, style = MaterialTheme.typography.labelSmall)
+                                            Text("Error code: ${item.reason}", color = Color.LightGray, style = MaterialTheme.typography.labelSmall)
                                         }
                                     }
                                 }
