@@ -186,7 +186,7 @@ private fun SudhaBrowserApp(context: Context) {
                         factory = { ctx: Context ->
                         (activeTab.webView ?: WebView(ctx).also { activeTab.webView = it }).apply {
                             settings.javaScriptEnabled = true; settings.domStorageEnabled = true; settings.loadsImagesAutomatically = true; settings.javaScriptCanOpenWindowsAutomatically = false
-                            settings.userAgentString = if (desktopMode) "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36" else WebView(ctx).settings.userAgentString
+                            settings.userAgentString = if (desktopMode) "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36" else android.webkit.WebSettings.getDefaultUserAgent(ctx)
                             setDownloadListener { url, userAgent, contentDisposition, mimeType, _ ->
                                 val request = DownloadManager.Request(Uri.parse(url)).apply {
                                     setMimeType(mimeType); addRequestHeader("User-Agent", userAgent)
@@ -263,7 +263,7 @@ private fun SudhaBrowserApp(context: Context) {
                                 desktopMode = it
                                 prefs.edit().putBoolean("desktop_mode", it).apply()
                                 activeTab.webView?.let { webView ->
-                                    webView.settings.userAgentString = if (it) "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36" else WebView(context).settings.userAgentString
+                                    webView.settings.userAgentString = if (it) "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36" else android.webkit.WebSettings.getDefaultUserAgent(context)
                                     webView.reload()
                                 }
                             })
