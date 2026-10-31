@@ -317,7 +317,7 @@ private fun SudhaBrowserApp(context: Context) {
         if (value.isBlank()) return
         val target = when {
             value.startsWith("https://") || value.startsWith("http://") -> value
-            value.contains(" ") || !value.contains(".") -> (when (searchEngine) { "Bing" -> "https://www.bing.com/search?q="; "DuckDuckGo" -> "https://duckduckgo.com/?q="; "Brave" -> "https://search.brave.com/search?q="; else -> "https://www.google.com/search?q=" }) + Uri.encode(value)
+            value.contains(" ") || !value.contains(".") -> (when (searchEngine) { "Bing" -> "https://www.bing.com/search?q="; "DuckDuckGo" -> "https://duckduckgo.com/?q="; "Brave" -> "https://search.brave.com/search?q="; "Startpage" -> "https://www.startpage.com/sp/search?query="; "Ecosia" -> "https://www.ecosia.org/search?q="; "Yahoo" -> "https://search.yahoo.com/search?p="; else -> "https://www.google.com/search?q=" }) + Uri.encode(value)
             else -> "https://$value"
         }
         activeTab.url = target; activeTab.title = target; address = target; screen = "browser"; showHomeDashboard = false
@@ -722,7 +722,7 @@ private fun SudhaBrowserApp(context: Context) {
                             Box {
                                 OutlinedButton(onClick = { showSearchEngines = true }, modifier = Modifier.fillMaxWidth()) { Text(searchEngine); Spacer(Modifier.weight(1f)); Text("Change") }
                                 DropdownMenu(expanded = showSearchEngines, onDismissRequest = { showSearchEngines = false }) {
-                                    listOf("Google", "Bing", "DuckDuckGo", "Brave").forEach { engine -> DropdownMenuItem(text = { Text(engine) }, onClick = { searchEngine = engine; prefs.edit().putString("search_engine", engine).apply(); showSearchEngines = false }) }
+                                    listOf("Google", "Bing", "DuckDuckGo", "Brave", "Startpage", "Ecosia", "Yahoo").forEach { engine -> DropdownMenuItem(text = { Text(engine) }, onClick = { searchEngine = engine; prefs.edit().putString("search_engine", engine).apply(); showSearchEngines = false }) }
                                 }
                             }
                         }
