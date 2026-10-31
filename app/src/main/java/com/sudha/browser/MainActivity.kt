@@ -8,6 +8,13 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
+import android.app.DownloadManager
+import android.os.Build
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.net.HttpURLConnection
+import java.net.URL
 import java.io.ByteArrayInputStream
 import android.graphics.Bitmap
 import android.net.Uri
@@ -77,6 +84,9 @@ class MainActivity : ComponentActivity() {
 @Composable
 private fun SudhaBrowserApp(context: Context) {
     val prefs = remember { context.getSharedPreferences("sudha_browser_data", Context.MODE_PRIVATE) }
+    val updateScope = rememberCoroutineScope()
+    var updateStatus by remember { mutableStateOf("You are using the latest checked version.") }
+    var checkingUpdate by remember { mutableStateOf(false) }
     fun readList(key: String): List<SavedPage> = runCatching {
         val array = JSONArray(prefs.getString(key, "[]"))
         (0 until array.length()).map { i -> array.getJSONObject(i).let { SavedPage(it.optString("title"), it.optString("url")) } }
@@ -392,6 +402,73 @@ private fun SudhaBrowserApp(context: Context) {
                                 Spacer(Modifier.width(8.dp))
                                 Text("Clear browsing data")
                             }
+                        }
+                        HorizontalDivider(color = Color(0xFF29364B))
+                        Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text("App updates", color = Color.White, style = MaterialTheme.typography.titleMedium)
+                            Text(updateStatus, color = Color.LightGray, style = MaterialTheme.typography.bodySmall)
+                            OutlinedButton(
+                                onClick = {
+                                    if (!checkingUpdate) updateScope.launch {
+                                        checkingUpdate = true
+                                        updateStatus = "Checking for updates..."
+                                        try {
+                                            val result = withContext(Dispatchers.IO) {
+                                                val connection = (URL("https://api.github.com/repos/Sudhamoy-X/SUDHA-S-BROWSER-/releases/latest").openConnection() as HttpURLConnection)
+                                                connection.connectTimeout = 12000
+                                                connection.readTimeout = 12000
+                                                connection.setRequestProperty("Accept", "application/vnd.github+json")
+                                                try {
+                                                    val json = JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
+                                                    val assets = json.optJSONArray("assets") ?: JSONArray()
+                                                    var apkUrl: String? = null
+                                                    for (i in 0 until assets.length()) {
+                                                        val asset = assets.getJSONObject(i)
+                                                        if (asset.optString("name") == "sudha-browser.apk") apkUrl = asset.optString("browser_download_url")
+                                                    }
+                                                    val latestCode = json.optInt("target_commitish", 0)
+                                                    val tagCode = json.optString("tag_name").substringAfterLast("-").toIntOrNull() ?: 0
+                                                    Pair(tagCode, apkUrl)
+                                                } finally { connection.disconnect() }
+                                            }
+                                            val installedCode = if (Build.VERSION.SDK_INT >= 28) context.packageManager.getPackageInfo(context.packageName, 0).longVersionCode.toInt() else @Suppress("DEPRECATION") context.packageManager.getPackageInfo(context.packageName, 0).versionCode
+                                            if (result.first <= installedCode || result.second.isNullOrBlank()) {
+                                                updateStatus = "No newer update is available."
+                                            } else {
+                                                val request = DownloadManager.Request(Uri.parse(result.second))
+                                                    .setTitle("SUDHA BROWSER update")
+                                                    .setDescription("Downloading version ${result.first}")
+                                                    .setMimeType("application/vnd.android.package-archive")
+                                                    .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+                                                    .setDestinationInExternalFilesDir(context, Environment.DIRECTORY_DOWNLOADS, "sudha-browser-update.apk")
+                                                val manager = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
+                                                val id = manager.enqueue(request)
+                                                updateStatus = "Update downloading. Android will ask you to confirm installation when ready."
+                                                while (true) {
+                                                    delay(1200)
+                                                    val cursor = manager.query(DownloadManager.Query().setFilterById(id))
+                                                    var statusCode = -1
+                                                    var apkUri: Uri? = null
+                                                    cursor?.use { if (it.moveToFirst()) { statusCode = it.getInt(it.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS)); apkUri = manager.getUriForDownloadedFile(id) } }
+                                                    if (statusCode == DownloadManager.STATUS_SUCCESSFUL && apkUri != null) {
+                                                        updateStatus = "Download complete. Opening installer..."
+                                                        val installIntent = Intent(Intent.ACTION_VIEW).setDataAndType(apkUri, "application/vnd.android.package-archive").addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
+                                                        context.startActivity(installIntent)
+                                                        break
+                                                    } else if (statusCode == DownloadManager.STATUS_FAILED) {
+                                                        updateStatus = "Update download failed. Please try again."
+                                                        break
+                                                    }
+                                                }
+                                            }
+                                        } catch (e: Exception) {
+                                            updateStatus = "Update check failed: ${e.localizedMessage ?: "network error"}"
+                                        } finally { checkingUpdate = false }
+                                    }
+                                },
+                                enabled = !checkingUpdate,
+                                modifier = Modifier.fillMaxWidth()
+                            ) { Text(if (checkingUpdate) "Checking / downloading..." else "Check for updates") }
                         }
                         HorizontalDivider(color = Color(0xFF29364B))
                         Text("Protection is based on a built-in domain list. Some ads and trackers may still load, and some websites may need these services to work. This is not a VPN or a complete network-wide blocker.", color = Color.Gray, style = MaterialTheme.typography.bodySmall)
