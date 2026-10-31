@@ -601,7 +601,7 @@ private fun SudhaBrowserApp(context: Context) {
                                     }
                                     return super.shouldInterceptRequest(view, request)
                                 }
-                                override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) { if (url != null) { activeTab.url = url; if (activeTab.id == activeTabId) address = url } }
+                                override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) { if (url != null) { activeTab.url = url; if (activeTab.id == activeTabId) address = url; persistSession() } }
                                 override fun onPageFinished(view: WebView?, url: String?) {
                                     if (readerMode) view?.evaluateJavascript("(function(){var s=document.getElementById('sudha-reader-style');if(!s){s=document.createElement('style');s.id='sudha-reader-style';document.head.appendChild(s);}s.textContent='body{max-width:780px!important;margin:24px auto!important;padding:24px!important;font-family:Georgia,serif!important;font-size:20px!important;line-height:1.8!important;background:#f5f1e8!important;color:#242424!important}';})();", null)
                                     if (url != null) {
