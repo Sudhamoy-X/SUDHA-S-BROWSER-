@@ -33,12 +33,17 @@ jobs:
       - name: Build debug APK
         run: gradle --no-daemon assembleDebug -PversionCode=${{ github.run_number }}
       - name: Build signed release APK
-        if: github.event_name != 'pull_request' && secrets.ANDROID_KEYSTORE_BASE64 != ''
+        if: github.event_name != 'pull_request'
         env:
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-        run: gradle --no-daemon assembleRelease -PversionCode=${{ github.run_number }}
+        run: |
+          if [ -n "$ANDROID_KEYSTORE_PATH" ] && [ -n "$ANDROID_KEYSTORE_PASSWORD" ] && [ -n "$ANDROID_KEY_ALIAS" ] && [ -n "$ANDROID_KEY_PASSWORD" ]; then
+            gradle --no-daemon assembleRelease -PversionCode=${{ github.run_number }}
+          else
+            echo "Signing secrets not configured yet; release APK will be debug-signed temporarily."
+          fi
       - name: Prepare APK for release
         if: github.event_name != 'pull_request'
         run: |
