@@ -33,8 +33,11 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.border
 import androidx.compose.foundation.background
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -89,21 +92,70 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 private fun SudhaBrandMark(modifier: Modifier = Modifier) {
-    val transition = rememberInfiniteTransition(label = "sudha-logo")
-    val glow by transition.animateFloat(
-        initialValue = 0.72f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(tween(1800), repeatMode = RepeatMode.Reverse),
-        label = "logo-glow"
+    val transition = rememberInfiniteTransition(label = "sudha-energy-ring")
+    val rotation by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(tween(5200), repeatMode = RepeatMode.Restart),
+        label = "energy-ring-rotation"
     )
-    Box(
-        modifier.graphicsLayer { scaleX = 0.98f + glow * 0.02f; scaleY = 0.98f + glow * 0.02f }
-            .background(Brush.linearGradient(listOf(Color(0xFF19DFFF), Color(0xFF315CFF), Color(0xFF9B42FF))), RoundedCornerShape(19.dp))
-            .padding(2.dp)
-            .background(Brush.linearGradient(listOf(Color(0xFF07152F), Color(0xFF15104A), Color(0xFF071B38))), RoundedCornerShape(17.dp)),
-        contentAlignment = Alignment.Center
-    ) {
-        Text("S", color = Color.White, style = MaterialTheme.typography.headlineLarge, fontWeight = androidx.compose.ui.text.font.FontWeight.Light)
+    val counterRotation by transition.animateFloat(
+        initialValue = 360f,
+        targetValue = 0f,
+        animationSpec = infiniteRepeatable(tween(7600), repeatMode = RepeatMode.Restart),
+        label = "energy-ring-counter-rotation"
+    )
+    val pulse by transition.animateFloat(
+        initialValue = 0.48f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(1700), repeatMode = RepeatMode.Reverse),
+        label = "energy-ring-pulse"
+    )
+    Box(modifier, contentAlignment = Alignment.Center) {
+        Canvas(Modifier.fillMaxSize()) {
+            val stroke = size.minDimension * 0.055f
+            val pad = stroke * 1.8f
+            drawCircle(
+                color = Color(0xFF174BBA).copy(alpha = 0.12f + pulse * 0.12f),
+                radius = size.minDimension * 0.43f,
+                style = Stroke(width = stroke * 2.4f)
+            )
+            drawArc(
+                brush = Brush.sweepGradient(listOf(Color.Transparent, Color(0xFF16DFFF).copy(alpha = pulse), Color(0xFF376BFF), Color(0xFFB34DFF), Color.Transparent)),
+                startAngle = rotation,
+                sweepAngle = 238f,
+                useCenter = false,
+                topLeft = androidx.compose.ui.geometry.Offset(pad, pad),
+                size = androidx.compose.ui.geometry.Size(size.width - pad * 2, size.height - pad * 2),
+                style = Stroke(width = stroke, cap = StrokeCap.Round)
+            )
+            drawArc(
+                brush = Brush.sweepGradient(listOf(Color.Transparent, Color(0xFF8B45FF).copy(alpha = pulse * 0.8f), Color(0xFF28CFFF), Color.Transparent)),
+                startAngle = counterRotation,
+                sweepAngle = 92f,
+                useCenter = false,
+                topLeft = androidx.compose.ui.geometry.Offset(pad * 1.65f, pad * 1.65f),
+                size = androidx.compose.ui.geometry.Size(size.width - pad * 3.3f, size.height - pad * 3.3f),
+                style = Stroke(width = stroke * 0.55f, cap = StrokeCap.Round)
+            )
+        }
+        Box(
+            Modifier.fillMaxSize(0.63f)
+                .background(Brush.radialGradient(listOf(Color(0xFF182A70).copy(alpha = 0.65f), Color(0xFF080F27).copy(alpha = 0.1f))), CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                "S",
+                color = Color.White,
+                style = MaterialTheme.typography.headlineLarge,
+                fontWeight = androidx.compose.ui.text.font.FontWeight.Light,
+                modifier = Modifier.graphicsLayer {
+                    shadowElevation = 9f
+                    scaleX = 1.04f
+                    scaleY = 1.04f
+                }
+            )
+        }
     }
 }
 
