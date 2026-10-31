@@ -33,6 +33,8 @@ import android.webkit.WebViewClient
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -872,48 +874,99 @@ private fun SudhaBrowserApp(context: Context) {
                         Text("Protection is based on a built-in domain list. Some ads and trackers may still load, and some websites may need these services to work. This is not a VPN or a complete network-wide blocker.", color = Color.Gray, style = MaterialTheme.typography.bodySmall)
                     }
                     "tabs" -> Column(Modifier.weight(1f).fillMaxWidth()) {
-                        Column(Modifier.fillMaxWidth().padding(horizontal = 14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            OutlinedTextField(value = tabSearch, onValueChange = { tabSearch = it }, modifier = Modifier.fillMaxWidth(), singleLine = true, placeholder = { Text("Search open tabs") }, leadingIcon = { Icon(Icons.Default.Search, null) })
-                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        val visibleTabs = tabs.filter { (selectedTabGroup == "All" || it.group == selectedTabGroup) && (tabSearch.isBlank() || it.title.contains(tabSearch, true) || it.url.contains(tabSearch, true)) }
+                        Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            OutlinedTextField(
+                                value = tabSearch,
+                                onValueChange = { tabSearch = it },
+                                modifier = Modifier.fillMaxWidth(),
+                                singleLine = true,
+                                shape = RoundedCornerShape(18.dp),
+                                placeholder = { Text("Search your open tabs") },
+                                leadingIcon = { Icon(Icons.Default.Search, null, tint = Cyan) }
+                            )
+                            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
                                 listOf("All", "Personal", "Work", "Shopping", "Ungrouped").forEach { group ->
-                                    FilterChip(selected = selectedTabGroup == group, onClick = { selectedTabGroup = group }, label = { Text(group, maxLines = 1) })
+                                    val count = if (group == "All") tabs.size else tabs.count { it.group == group }
+                                    FilterChip(selected = selectedTabGroup == group, onClick = { selectedTabGroup = group }, label = { Text("$group  $count", maxLines = 1) }, shape = RoundedCornerShape(14.dp))
                                 }
                             }
-                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                OutlinedButton(onClick = { reopenLastClosedTab() }, enabled = recentlyClosedTabs.isNotEmpty(), modifier = Modifier.weight(1f)) { Text("Reopen closed") }
-                                OutlinedButton(onClick = { duplicateActiveTab() }, enabled = activeTab.url.isNotBlank(), modifier = Modifier.weight(1f)) { Text("Duplicate") }
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                OutlinedButton(onClick = { reopenLastClosedTab() }, enabled = recentlyClosedTabs.isNotEmpty(), modifier = Modifier.weight(1f), shape = RoundedCornerShape(14.dp)) { Text("Reopen closed") }
+                                OutlinedButton(onClick = { duplicateActiveTab() }, enabled = activeTab.url.isNotBlank(), modifier = Modifier.weight(1f), shape = RoundedCornerShape(14.dp)) { Text("Duplicate") }
                             }
-                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                TextButton(onClick = { closeOtherTabs() }, enabled = tabs.size > 1, modifier = Modifier.weight(1f)) { Text("Close others") }
-                                TextButton(onClick = { closeAllTabs() }, enabled = tabs.isNotEmpty(), modifier = Modifier.weight(1f)) { Text("Close all") }
+                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                Text("${visibleTabs.size} tabs shown", color = Color.LightGray, style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f))
+                                TextButton(onClick = { closeOtherTabs() }, enabled = tabs.size > 1) { Text("Close others", color = Cyan) }
+                                TextButton(onClick = { closeAllTabs() }, enabled = tabs.isNotEmpty()) { Text("Close all", color = Color(0xFFFF8585)) }
                             }
-                            if (recentlyClosedTabs.isNotEmpty()) Text("Recently closed: ${recentlyClosedTabs.first().title}", color = Color.Gray, style = MaterialTheme.typography.bodySmall, maxLines = 1)
+                            if (recentlyClosedTabs.isNotEmpty()) {
+                                Row(Modifier.fillMaxWidth().background(Color(0xFF101E33), RoundedCornerShape(12.dp)).padding(horizontal = 12.dp, vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Default.History, null, tint = Cyan, modifier = Modifier.size(17.dp))
+                                    Spacer(Modifier.width(8.dp))
+                                    Text("Recently closed: ${recentlyClosedTabs.first().title}", color = Color.LightGray, style = MaterialTheme.typography.bodySmall, maxLines = 1)
+                                }
+                            }
                         }
-                        LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                            items(tabs.filter { (selectedTabGroup == "All" || it.group == selectedTabGroup) && (tabSearch.isBlank() || it.title.contains(tabSearch, true) || it.url.contains(tabSearch, true)) }, key = { it.id }) { tab ->
-                            Row(Modifier.fillMaxWidth().background(if (tab.id == activeTabId) Color(0xFF172B48) else SurfaceBlue, RoundedCornerShape(16.dp)).clickable { activeTabId = tab.id; address = tab.url; screen = "browser"; showHomeDashboard = tab.url.isBlank(); persistSession() }.padding(start = 14.dp, end = 6.dp, top = 10.dp, bottom = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-                                Column(Modifier.weight(1f)) {
-                                    Text(tab.title, color = Color.White, maxLines = 1)
-                                    Text(tab.url, color = Color.LightGray, maxLines = 1, style = MaterialTheme.typography.bodySmall)
-                                    Text(tab.group, color = Cyan, style = MaterialTheme.typography.labelSmall)
+                        if (visibleTabs.isEmpty()) {
+                            Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    Icon(Icons.Default.Tab, null, tint = Cyan, modifier = Modifier.size(42.dp))
+                                    Text(if (tabs.isEmpty()) "No open tabs" else "No matching tabs", color = Color.White, style = MaterialTheme.typography.titleMedium)
+                                    Text("Open a new tab to continue browsing.", color = Color.Gray, style = MaterialTheme.typography.bodySmall)
+                                    OutlinedButton(onClick = { addTab() }, shape = RoundedCornerShape(14.dp)) { Icon(Icons.Default.Add, null); Spacer(Modifier.width(6.dp)); Text("New tab") }
                                 }
-                                Box {
-                                    IconButton(onClick = { groupMenuTabId = tab.id }) { Icon(Icons.Default.MoreVert, "Change tab group", tint = Color.LightGray) }
-                                    DropdownMenu(expanded = groupMenuTabId == tab.id, onDismissRequest = { groupMenuTabId = null }) {
-                                        listOf("Personal", "Work", "Shopping", "Ungrouped").forEach { group ->
-                                            DropdownMenuItem(text = { Text(if (tab.group == group) "✓ $group" else group) }, onClick = {
-                                                tab.group = group
-                                                groupMenuTabId = null
-                                                persistSession()
-                                            })
+                            }
+                        } else {
+                            LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(horizontal = 16.dp, vertical = 14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                items(visibleTabs, key = { it.id }) { tab ->
+                                    val selected = tab.id == activeTabId
+                                    val cardColor by animateColorAsState(targetValue = if (selected) Color(0xFF172F50) else SurfaceBlue, animationSpec = tween(240), label = "tab-card-color")
+                                    Column(
+                                        Modifier.fillMaxWidth().animateContentSize(animationSpec = tween(260))
+                                            .border(if (selected) 1.5.dp else 1.dp, if (selected) ElectricBlue.copy(alpha = 0.9f) else Color(0xFF26364D), RoundedCornerShape(20.dp))
+                                            .background(cardColor, RoundedCornerShape(20.dp))
+                                            .clickable { activeTabId = tab.id; address = tab.url; screen = "browser"; showHomeDashboard = tab.url.isBlank(); persistSession() }
+                                            .padding(14.dp),
+                                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                                    ) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Box(Modifier.size(34.dp).background(Color(0xFF203B60), RoundedCornerShape(11.dp)), contentAlignment = Alignment.Center) {
+                                                Text(if (tab.url.isBlank()) "＋" else (Uri.parse(tab.url).host?.firstOrNull()?.uppercase() ?: "W"), color = Cyan, style = MaterialTheme.typography.titleMedium)
+                                            }
+                                            Spacer(Modifier.width(10.dp))
+                                            Column(Modifier.weight(1f)) {
+                                                Text(tab.title.ifBlank { "New tab" }, color = Color.White, style = MaterialTheme.typography.titleSmall, maxLines = 1)
+                                                Text(if (tab.url.isBlank()) "Ready for a new page" else (Uri.parse(tab.url).host ?: tab.url), color = Color.LightGray, style = MaterialTheme.typography.bodySmall, maxLines = 1)
+                                            }
+                                            if (selected) Surface(color = Color(0xFF173F70), shape = RoundedCornerShape(20.dp)) {
+                                                Text("ACTIVE", color = Cyan, style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp))
+                                            }
+                                            IconButton(onClick = { closeTab(tab.id) }) { Icon(Icons.Default.Close, "Close tab", tint = Color.LightGray) }
+                                        }
+                                        Text(tab.url.ifBlank { "Blank tab" }, color = Color(0xFF9BAEC8), style = MaterialTheme.typography.bodySmall, maxLines = 1)
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Surface(color = Color(0xFF142A45), shape = RoundedCornerShape(10.dp)) {
+                                                Text(tab.group, color = Cyan, style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp))
+                                            }
+                                            Spacer(Modifier.weight(1f))
+                                            Box {
+                                                TextButton(onClick = { groupMenuTabId = tab.id }) { Text("Move to group", color = Color.LightGray); Icon(Icons.Default.MoreVert, null, tint = Cyan) }
+                                                DropdownMenu(expanded = groupMenuTabId == tab.id, onDismissRequest = { groupMenuTabId = null }) {
+                                                    listOf("Personal", "Work", "Shopping", "Ungrouped").forEach { group ->
+                                                        DropdownMenuItem(text = { Text(if (tab.group == group) "✓ $group" else group) }, onClick = {
+                                                            tab.group = group
+                                                            groupMenuTabId = null
+                                                            persistSession()
+                                                        })
+                                                    }
+                                                }
+                                            }
                                         }
                                     }
                                 }
-                                IconButton(onClick = { closeTab(tab.id) }) { Icon(Icons.Default.Close, "Close tab", tint = Color.LightGray) }
                             }
                         }
-                        }
-                    }
                     "bookmarks", "history" -> {
                         val baseList = if (screen == "bookmarks") bookmarks.toList() else history.toList()
                         val filteredList = baseList.filter { (screen != "bookmarks" || selectedBookmarkFolder == "All" || it.folder == selectedBookmarkFolder) && (savedSearch.isBlank() || it.title.contains(savedSearch, true) || it.url.contains(savedSearch, true)) }
