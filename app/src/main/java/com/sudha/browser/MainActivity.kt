@@ -542,9 +542,10 @@ private fun SudhaBrowserApp(context: Context) {
                     Row(
                         Modifier.fillMaxWidth()
                             .navigationBarsPadding()
-                            .height(58.dp)
-                            .background(Color(0xFF0D1422))
-                            .border(width = 0.5.dp, color = Color(0xFF26364D)),
+                            .height(54.dp)
+                            .background(Brush.verticalGradient(listOf(Color(0xFF121D30), Color(0xFF080F1D))))
+                            .border(width = 0.5.dp, color = Color(0xFF26364D))
+                            .padding(horizontal = 5.dp),
                         horizontalArrangement = Arrangement.SpaceEvenly,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -554,8 +555,8 @@ private fun SudhaBrowserApp(context: Context) {
                         IconButton(onClick = { activeTab.webView?.goForward() }, enabled = activeTab.webView?.canGoForward() == true) {
                             Icon(Icons.Default.ArrowForward, "Forward", tint = if (activeTab.webView?.canGoForward() == true) Color.White else Color(0xFF657184), modifier = Modifier.size(22.dp))
                         }
-                        IconButton(onClick = { showHomeDashboard = true; address = "" }) {
-                            Icon(Icons.Default.Home, "Home", tint = Color.White, modifier = Modifier.size(22.dp))
+                        IconButton(onClick = { showHomeDashboard = true; address = "" }, modifier = Modifier.size(40.dp).background(Color(0xFF17364A), CircleShape)) {
+                            Icon(Icons.Default.Home, "Home", tint = Cyan, modifier = Modifier.size(21.dp))
                         }
                         IconButton(onClick = { screen = "tabs" }) {
                             BadgedBox(badge = { Badge { Text(tabs.size.toString()) } }) {
