@@ -3,6 +3,7 @@ package com.sudha.browser
 import android.annotation.SuppressLint
 import android.app.DownloadManager
 import android.content.Context
+import android.content.Intent
 import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Bundle
@@ -38,6 +39,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Tab
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import kotlinx.coroutines.delay
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -55,6 +57,7 @@ private val Cyan = Color(0xFF45D7F5)
 
 private data class BrowserTab(val id: Int, var url: String = "https://www.google.com", var title: String = "New tab", var webView: WebView? = null)
 private data class SavedPage(val title: String, val url: String)
+private data class DownloadEntry(val id: Long, val title: String, val status: String, val downloaded: Long, val total: Long, val reason: Int, val uri: Uri?)
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) { super.onCreate(savedInstanceState); setContent { SudhaBrowserApp(this) } }
@@ -76,6 +79,44 @@ private fun SudhaBrowserApp(context: Context) {
     var address by remember { mutableStateOf("") }
     var progress by remember { mutableIntStateOf(0) }
     var screen by remember { mutableStateOf("browser") }
+    var downloads by remember { mutableStateOf<List<DownloadEntry>>(emptyList()) }
+    val downloadManager = remember { context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager }
+
+    fun refreshDownloads() {
+        val result = mutableListOf<DownloadEntry>()
+        val cursor = downloadManager.query(DownloadManager.Query().setFilterByStatus(
+            DownloadManager.STATUS_PENDING or DownloadManager.STATUS_RUNNING or DownloadManager.STATUS_PAUSED or DownloadManager.STATUS_SUCCESSFUL or DownloadManager.STATUS_FAILED
+        ))
+        cursor?.use { c ->
+            while (c.moveToNext()) {
+                val id = c.getLong(c.getColumnIndexOrThrow(DownloadManager.COLUMN_ID))
+                val title = c.getString(c.getColumnIndexOrThrow(DownloadManager.COLUMN_TITLE)) ?: "Downloaded file"
+                val statusCode = c.getInt(c.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS))
+                val status = when (statusCode) {
+                    DownloadManager.STATUS_PENDING -> "Waiting"
+                    DownloadManager.STATUS_RUNNING -> "Downloading"
+                    DownloadManager.STATUS_PAUSED -> "Paused / waiting for network"
+                    DownloadManager.STATUS_SUCCESSFUL -> "Completed"
+                    DownloadManager.STATUS_FAILED -> "Failed"
+                    else -> "Unknown"
+                }
+                val downloaded = c.getLong(c.getColumnIndexOrThrow(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR))
+                val total = c.getLong(c.getColumnIndexOrThrow(DownloadManager.COLUMN_TOTAL_SIZE_BYTES))
+                val reason = c.getInt(c.getColumnIndexOrThrow(DownloadManager.COLUMN_REASON))
+                result.add(DownloadEntry(id, title, status, downloaded, total, reason, downloadManager.getUriForDownloadedFile(id)))
+            }
+        }
+        downloads = result
+    }
+
+    LaunchedEffect(screen) {
+        if (screen == "downloads") {
+            while (true) {
+                refreshDownloads()
+                delay(1000)
+            }
+        }
+    }
     val activeTab = tabs.firstOrNull { it.id == activeTabId } ?: tabs.first()
 
     fun persist(key: String, list: List<SavedPage>) {
@@ -142,7 +183,7 @@ private fun SudhaBrowserApp(context: Context) {
                                     setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
                                     setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, URLUtil.guessFileName(url, contentDisposition, mimeType))
                                 }
-                                (ctx.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager).enqueue(request)
+                                downloadManager.enqueue(request)
                             }
                             webViewClient = object : WebViewClient() {
                                 override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) { if (url != null) { activeTab.url = url; address = url } }
@@ -190,8 +231,52 @@ private fun SudhaBrowserApp(context: Context) {
                         }
                         if (screen == "history" && history.isNotEmpty()) TextButton(onClick = { history.clear(); persist("history", history) }, modifier = Modifier.align(Alignment.End).padding(end = 12.dp)) { Text("Clear history", color = Cyan) }
                     }
-                    "downloads" -> Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) { Icon(Icons.Default.Download, null, tint = Cyan, modifier = Modifier.size(36.dp)); Text("Downloads are saved to your Downloads folder.", color = Color.LightGray) }
+                    "downloads" -> {
+                        if (downloads.isEmpty()) {
+                            Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Icon(Icons.Default.Download, null, tint = Cyan, modifier = Modifier.size(36.dp))
+                                    Text("No downloads yet", color = Color.LightGray)
+                                    Text("Files downloaded in the browser appear here.", color = Color.Gray, style = MaterialTheme.typography.bodySmall)
+                                }
+                            }
+                        } else {
+                            LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                items(downloads, key = { it.id }) { item ->
+                                    Column(Modifier.fillMaxWidth().background(SurfaceBlue, RoundedCornerShape(16.dp)).padding(14.dp)) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Icon(Icons.Default.Download, null, tint = Cyan)
+                                            Spacer(Modifier.width(10.dp))
+                                            Column(Modifier.weight(1f)) {
+                                                Text(item.title, color = Color.White, maxLines = 2)
+                                                Text(item.status, color = if (item.status == "Failed") Color(0xFFFF7777) else Cyan, style = MaterialTheme.typography.labelSmall)
+                                            }
+                                            IconButton(onClick = { downloadManager.remove(item.id); refreshDownloads() }) {
+                                                Icon(Icons.Default.Delete, "Delete download", tint = Color.LightGray)
+                                            }
+                                        }
+                                        if (item.status == "Downloading" || item.status == "Waiting" || item.status.startsWith("Paused")) {
+                                            Spacer(Modifier.height(8.dp))
+                                            val fraction = if (item.total > 0L) (item.downloaded.toFloat() / item.total.toFloat()).coerceIn(0f, 1f) else 0f
+                                            LinearProgressIndicator(progress = { fraction }, modifier = Modifier.fillMaxWidth(), color = ElectricBlue, trackColor = Midnight)
+                                            Text(if (item.total > 0L) "\${item.downloaded / 1024} KB / \${item.total / 1024} KB" else "\${item.downloaded / 1024} KB downloaded", color = Color.LightGray, style = MaterialTheme.typography.labelSmall)
+                                        } else if (item.status == "Completed") {
+                                            Text("Ready to open", color = Color.LightGray, style = MaterialTheme.typography.labelSmall)
+                                            TextButton(onClick = {
+                                                val uri = item.uri ?: downloadManager.getUriForDownloadedFile(item.id)
+                                                if (uri != null) {
+                                                    val mime = downloadManager.getMimeTypeForDownloadedFile(item.id) ?: "*/*"
+                                                    val intent = Intent(Intent.ACTION_VIEW).setDataAndType(uri, mime).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                                    runCatching { context.startActivity(intent) }
+                                                }
+                                            }) { Text("Open file", color = Cyan) }
+                                        } else if (item.status == "Failed") {
+                                            Text("Error code: \${item.reason}", color = Color.LightGray, style = MaterialTheme.typography.labelSmall)
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
