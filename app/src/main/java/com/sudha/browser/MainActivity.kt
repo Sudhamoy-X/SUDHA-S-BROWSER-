@@ -816,12 +816,26 @@ private fun SudhaBrowserApp(context: Context) {
                         HorizontalDivider(color = Color(0xFF29364B))
                         Text("Protection is based on a built-in domain list. Some ads and trackers may still load, and some websites may need these services to work. This is not a VPN or a complete network-wide blocker.", color = Color.Gray, style = MaterialTheme.typography.bodySmall)
                     }
-                    "tabs" -> LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        items(tabs, key = { it.id }) { tab ->
+                    "tabs" -> Column(Modifier.weight(1f).fillMaxWidth()) {
+                        Column(Modifier.fillMaxWidth().padding(horizontal = 14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            OutlinedTextField(value = tabSearch, onValueChange = { tabSearch = it }, modifier = Modifier.fillMaxWidth(), singleLine = true, placeholder = { Text("Search open tabs") }, leadingIcon = { Icon(Icons.Default.Search, null) })
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                OutlinedButton(onClick = { reopenLastClosedTab() }, enabled = recentlyClosedTabs.isNotEmpty(), modifier = Modifier.weight(1f)) { Text("Reopen closed") }
+                                OutlinedButton(onClick = { duplicateActiveTab() }, enabled = activeTab.url.isNotBlank(), modifier = Modifier.weight(1f)) { Text("Duplicate") }
+                            }
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                TextButton(onClick = { closeOtherTabs() }, enabled = tabs.size > 1, modifier = Modifier.weight(1f)) { Text("Close others") }
+                                TextButton(onClick = { closeAllTabs() }, enabled = tabs.isNotEmpty(), modifier = Modifier.weight(1f)) { Text("Close all") }
+                            }
+                            if (recentlyClosedTabs.isNotEmpty()) Text("Recently closed: ${recentlyClosedTabs.first().title}", color = Color.Gray, style = MaterialTheme.typography.bodySmall, maxLines = 1)
+                        }
+                        LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            items(tabs.filter { tabSearch.isBlank() || it.title.contains(tabSearch, true) || it.url.contains(tabSearch, true) }, key = { it.id }) { tab ->
                             Row(Modifier.fillMaxWidth().background(if (tab.id == activeTabId) Color(0xFF172B48) else SurfaceBlue, RoundedCornerShape(16.dp)).clickable { activeTabId = tab.id; address = tab.url; screen = "browser"; showHomeDashboard = tab.url.isBlank() }.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
                                 Column(Modifier.weight(1f)) { Text(tab.title, color = Color.White, maxLines = 1); Text(tab.url, color = Color.LightGray, maxLines = 1, style = MaterialTheme.typography.bodySmall) }
                                 IconButton(onClick = { closeTab(tab.id) }) { Icon(Icons.Default.Close, "Close tab", tint = Color.LightGray) }
                             }
+                        }
                         }
                     }
                     "bookmarks", "history" -> {
