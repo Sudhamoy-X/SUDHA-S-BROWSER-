@@ -996,14 +996,29 @@ private fun SudhaBrowserApp(context: Context) {
                                             Text(if (item.total > 0L) "${item.downloaded / 1024} KB / ${item.total / 1024} KB" else "${item.downloaded / 1024} KB downloaded", color = Color.LightGray, style = MaterialTheme.typography.labelSmall)
                                         } else if (item.status == "Completed") {
                                             Text("Ready to open", color = Color.LightGray, style = MaterialTheme.typography.labelSmall)
-                                            TextButton(onClick = {
-                                                val uri = item.uri ?: downloadManager.getUriForDownloadedFile(item.id)
-                                                if (uri != null) {
-                                                    val mime = downloadManager.getMimeTypeForDownloadedFile(item.id) ?: "*/*"
-                                                    val intent = Intent(Intent.ACTION_VIEW).setDataAndType(uri, mime).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                                    runCatching { context.startActivity(intent) }
-                                                }
-                                            }) { Text("Open file", color = Cyan) }
+                                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                                TextButton(onClick = {
+                                                    val uri = item.uri ?: downloadManager.getUriForDownloadedFile(item.id)
+                                                    if (uri != null) {
+                                                        val mime = downloadManager.getMimeTypeForDownloadedFile(item.id) ?: "*/*"
+                                                        val intent = Intent(Intent.ACTION_VIEW).setDataAndType(uri, mime).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                                        runCatching { context.startActivity(intent) }
+                                                    }
+                                                }) { Text("Open file", color = Cyan) }
+                                                TextButton(onClick = {
+                                                    val uri = item.uri ?: downloadManager.getUriForDownloadedFile(item.id)
+                                                    if (uri != null) {
+                                                        val mime = downloadManager.getMimeTypeForDownloadedFile(item.id) ?: "*/*"
+                                                        val intent = Intent(Intent.ACTION_SEND).setType(mime)
+                                                            .putExtra(Intent.EXTRA_STREAM, uri)
+                                                            .putExtra(Intent.EXTRA_SUBJECT, item.title)
+                                                            .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                                        runCatching {
+                                                            context.startActivity(Intent.createChooser(intent, "Share downloaded file"))
+                                                        }
+                                                    }
+                                                }) { Text("Share", color = Cyan) }
+                                            }
                                         } else if (item.status == "Failed") {
                                             Text("Error code: ${item.reason}", color = Color.LightGray, style = MaterialTheme.typography.labelSmall)
                                         }
