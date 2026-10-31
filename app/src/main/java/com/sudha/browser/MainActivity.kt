@@ -855,8 +855,7 @@ private fun SudhaBrowserApp(context: Context) {
                                 TextButton(onClick = { sortBookmarksAZ = !sortBookmarksAZ }) { Text(if (sortBookmarksAZ) "Sort: A–Z" else "Sort: Recent", color = Cyan) }
                                 TextButton(onClick = { importBookmarksText = ""; showImportBookmarksDialog = true }) { Text("Import", color = Cyan) }
                                 TextButton(onClick = {
-                                    val exportText = bookmarks.joinToString(separator = "
-") { it.title + " | " + it.url }
+                                    val exportText = bookmarks.joinToString(separator = "\n") { it.title + " | " + it.url }
                                     if (exportText.isNotBlank()) runCatching { context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, exportText), "Export bookmarks")) }
                                 }, enabled = bookmarks.isNotEmpty()) { Text("Export", color = Cyan) }
                             }
