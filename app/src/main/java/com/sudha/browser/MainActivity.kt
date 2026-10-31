@@ -217,7 +217,7 @@ private fun SudhaBrowserApp(context: Context) {
                             webChromeClient = object : WebChromeClient() { override fun onProgressChanged(view: WebView?, newProgress: Int) { progress = newProgress } }
                             if (this.url.isNullOrBlank()) loadUrl(activeTab.url)
                         }
-                    , update = { view: WebView -> if (view.url != activeTab.url && activeTab.url.isNotBlank()) view.loadUrl(activeTab.url) })
+                    }, update = { view: WebView -> if (view.url != activeTab.url && activeTab.url.isNotBlank()) view.loadUrl(activeTab.url) })
                 }
             } else {
                 val heading = when (screen) { "tabs" -> "Your tabs"; "bookmarks" -> "Bookmarks"; "history" -> "History"; "settings" -> "Privacy & settings"; else -> "Downloads" }
@@ -253,7 +253,6 @@ private fun SudhaBrowserApp(context: Context) {
                         }
                         HorizontalDivider(color = Color(0xFF29364B))
                         Text("Protection is based on a built-in domain list. Some ads and trackers may still load, and some websites may need these services to work. This is not a VPN or a complete network-wide blocker.", color = Color.Gray, style = MaterialTheme.typography.bodySmall)
-                        Text("Blocked requests this session: ${BrowserContentFilter.blockedRequestCount.get()}", color = Cyan, style = MaterialTheme.typography.labelMedium)
                     }
                     "tabs" -> LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         items(tabs, key = { it.id }) { tab ->
