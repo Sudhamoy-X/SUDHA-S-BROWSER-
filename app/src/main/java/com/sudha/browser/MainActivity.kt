@@ -9,6 +9,8 @@ import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Bundle
 import android.os.Environment
+import android.webkit.CookieManager
+import android.webkit.WebStorage
 import android.webkit.URLUtil
 import android.webkit.WebChromeClient
 import android.webkit.WebView
@@ -84,6 +86,7 @@ private fun SudhaBrowserApp(context: Context) {
     var adsEnabled by remember { mutableStateOf(prefs.getBoolean("block_ads", true)) }
     var trackingEnabled by remember { mutableStateOf(prefs.getBoolean("block_trackers", true)) }
     var desktopMode by remember { mutableStateOf(prefs.getBoolean("desktop_mode", false)) }
+    var showClearDataDialog by remember { mutableStateOf(false) }
     BrowserContentFilter.adsEnabled = adsEnabled
     BrowserContentFilter.trackingEnabled = trackingEnabled
     var downloads by remember { mutableStateOf<List<DownloadEntry>>(emptyList()) }
@@ -269,6 +272,16 @@ private fun SudhaBrowserApp(context: Context) {
                             })
                         }
                         HorizontalDivider(color = Color(0xFF29364B))
+                        Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text("Clear browsing data", color = Color.White, style = MaterialTheme.typography.titleMedium)
+                            Text("Remove saved history, website cookies and cached files from WebView.", color = Color.LightGray, style = MaterialTheme.typography.bodySmall)
+                            OutlinedButton(onClick = { showClearDataDialog = true }, modifier = Modifier.fillMaxWidth()) {
+                                Icon(Icons.Default.Delete, null)
+                                Spacer(Modifier.width(8.dp))
+                                Text("Clear browsing data")
+                            }
+                        }
+                        HorizontalDivider(color = Color(0xFF29364B))
                         Text("Protection is based on a built-in domain list. Some ads and trackers may still load, and some websites may need these services to work. This is not a VPN or a complete network-wide blocker.", color = Color.Gray, style = MaterialTheme.typography.bodySmall)
                     }
                     "tabs" -> LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -340,6 +353,26 @@ private fun SudhaBrowserApp(context: Context) {
                         }
                     }
                 }
+            }
+            if (showClearDataDialog) {
+                AlertDialog(
+                    onDismissRequest = { showClearDataDialog = false },
+                    title = { Text("Clear browsing data?") },
+                    text = { Text("This removes all saved browsing history, website cookies and cached WebView files. You may be signed out of websites. Bookmarks and downloaded files will remain.") },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            history.clear()
+                            persist("history", history)
+                            tabs.forEach { tab -> tab.webView?.apply { clearHistory(); clearCache(true) } }
+                            CookieManager.getInstance().removeAllCookies {
+                                CookieManager.getInstance().flush()
+                            }
+                            WebStorage.getInstance().deleteAllData()
+                            showClearDataDialog = false
+                        }) { Text("Clear data", color = Color(0xFFFF7777)) }
+                    },
+                    dismissButton = { TextButton(onClick = { showClearDataDialog = false }) { Text("Cancel") } }
+                )
             }
             Row(Modifier.fillMaxWidth().navigationBarsPadding().background(SurfaceBlue).padding(horizontal = 8.dp, vertical = 6.dp), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
                 NavigationBarItem(selected = screen == "browser", onClick = { screen = "browser" }, icon = { Icon(Icons.Default.Home, null) }, label = { Text("Home") })
