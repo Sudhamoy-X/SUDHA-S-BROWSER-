@@ -224,7 +224,7 @@ private fun SudhaBrowserApp(context: Context) {
     var showClearDataDialog by remember { mutableStateOf(false) }
     var searchEngine by remember { mutableStateOf(prefs.getString("search_engine", "Google") ?: "Google") }
     var showSearchEngines by remember { mutableStateOf(false) }
-    var textZoom by remember { mutableIntStateOf(prefs.getInt("text_zoom", 100).coerceIn(75, 500)) }
+    var textZoom by remember { mutableIntStateOf(prefs.getInt("text_zoom", 100).coerceIn(75, 125)) }
     var showFindBar by remember { mutableStateOf(false) }
     var readerMode by remember { mutableStateOf(false) }
     var javaScriptEnabled by remember { mutableStateOf(prefs.getBoolean("javascript_enabled", true)) }
@@ -390,34 +390,34 @@ private fun SudhaBrowserApp(context: Context) {
                 }
             }
             if (screen == "browser") {
-                if (!showHomeDashboard) Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp).background(SurfaceBlue, CircleShape).padding(start = 14.dp, end = 6.dp, top = 4.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Search, null, tint = Cyan); Spacer(Modifier.width(8.dp))
-                    TextField(value = address, onValueChange = { address = it }, modifier = Modifier.weight(1f), placeholder = { Text("Search or enter address", color = Color.LightGray) }, singleLine = true,
+                if (!showHomeDashboard) Row(Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 3.dp).height(48.dp).background(SurfaceBlue, CircleShape).padding(start = 12.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Search, null, tint = Cyan, modifier = Modifier.size(20.dp)); Spacer(Modifier.width(7.dp))
+                    TextField(value = address, onValueChange = { address = it }, modifier = Modifier.weight(1f).height(48.dp), textStyle = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp), placeholder = { Text("Search or enter address", color = Color.LightGray, fontSize = 13.sp) }, singleLine = true,
                         colors = TextFieldDefaults.colors(focusedTextColor = Color.White, unfocusedTextColor = Color.White, focusedContainerColor = Color.Transparent, unfocusedContainerColor = Color.Transparent, focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent, cursorColor = Cyan),
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go), keyboardActions = KeyboardActions(onGo = { navigate(address) }))
-                    IconButton(onClick = { navigate(address) }) { Icon(Icons.Default.ArrowForward, "Go", tint = Cyan) }
+                    IconButton(onClick = { navigate(address) }, modifier = Modifier.size(40.dp)) { Icon(Icons.Default.ArrowForward, "Go", tint = Cyan, modifier = Modifier.size(21.dp)) }
                 }
                 if (!showHomeDashboard) {
                     Row(
-                        Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 1.dp),
+                        Modifier.fillMaxWidth().height(44.dp).padding(horizontal = 8.dp),
                         horizontalArrangement = Arrangement.SpaceEvenly,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        IconButton(onClick = { activeTab.webView?.goBack() }, enabled = activeTab.webView?.canGoBack() == true) {
-                            Icon(Icons.Default.ArrowBack, "Back", tint = if (activeTab.webView?.canGoBack() == true) Color.White else Color.Gray)
+                        IconButton(onClick = { activeTab.webView?.goBack() }, enabled = activeTab.webView?.canGoBack() == true, modifier = Modifier.size(40.dp)) {
+                            Icon(Icons.Default.ArrowBack, "Back", tint = if (activeTab.webView?.canGoBack() == true) Color.White else Color.Gray, modifier = Modifier.size(21.dp))
                         }
-                        IconButton(onClick = { activeTab.webView?.goForward() }, enabled = activeTab.webView?.canGoForward() == true) {
-                            Icon(Icons.Default.ArrowForward, "Forward", tint = if (activeTab.webView?.canGoForward() == true) Color.White else Color.Gray)
+                        IconButton(onClick = { activeTab.webView?.goForward() }, enabled = activeTab.webView?.canGoForward() == true, modifier = Modifier.size(40.dp)) {
+                            Icon(Icons.Default.ArrowForward, "Forward", tint = if (activeTab.webView?.canGoForward() == true) Color.White else Color.Gray, modifier = Modifier.size(21.dp))
                         }
-                        IconButton(onClick = { if (progress in 1..99) activeTab.webView?.stopLoading() else activeTab.webView?.reload() }) {
-                            Icon(if (progress in 1..99) Icons.Default.Close else Icons.Default.Refresh, "Reload", tint = Cyan)
+                        IconButton(onClick = { if (progress in 1..99) activeTab.webView?.stopLoading() else activeTab.webView?.reload() }, modifier = Modifier.size(40.dp)) {
+                            Icon(if (progress in 1..99) Icons.Default.Close else Icons.Default.Refresh, "Reload", tint = Cyan, modifier = Modifier.size(22.dp))
                         }
-                        IconButton(onClick = { saveBookmark() }) { Icon(Icons.Default.Bookmark, "Bookmark", tint = Cyan) }
-                        IconButton(onClick = { screen = "tabs" }) {
-                            BadgedBox(badge = { Badge { Text(tabs.size.toString()) } }) { Icon(Icons.Default.Tab, "Tabs", tint = Color.White) }
+                        IconButton(onClick = { saveBookmark() }, modifier = Modifier.size(40.dp)) { Icon(Icons.Default.Bookmark, "Bookmark", tint = Cyan, modifier = Modifier.size(21.dp)) }
+                        IconButton(onClick = { screen = "tabs" }, modifier = Modifier.size(40.dp)) {
+                            BadgedBox(badge = { Badge { Text(tabs.size.toString()) } }) { Icon(Icons.Default.Tab, "Tabs", tint = Color.White, modifier = Modifier.size(21.dp)) }
                         }
                         Box {
-                            IconButton(onClick = { showPageTools = true }) { Icon(Icons.Default.MoreVert, "Page menu", tint = Cyan) }
+                            IconButton(onClick = { showPageTools = true }, modifier = Modifier.size(40.dp)) { Icon(Icons.Default.MoreVert, "Page menu", tint = Cyan, modifier = Modifier.size(21.dp)) }
                             DropdownMenu(expanded = showPageTools, onDismissRequest = { showPageTools = false }) {
                                 DropdownMenuItem(text = { Text("Share page") }, onClick = {
                                     showPageTools = false
@@ -773,7 +773,7 @@ private fun SudhaBrowserApp(context: Context) {
                         Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             Text("Website text size", color = Color.White, style = MaterialTheme.typography.titleMedium)
                             Text("$textZoom%", color = Cyan, style = MaterialTheme.typography.labelLarge)
-                            Slider(value = textZoom.toFloat(), onValueChange = { textZoom = it.toInt().coerceIn(75, 500) }, valueRange = 75f..500f, onValueChangeFinished = { prefs.edit().putInt("text_zoom", textZoom).apply(); tabs.forEach { it.webView?.settings?.textZoom = textZoom } })
+                            Slider(value = textZoom.toFloat(), onValueChange = { textZoom = it.toInt().coerceIn(75, 125) }, valueRange = 75f..125f, onValueChangeFinished = { prefs.edit().putInt("text_zoom", textZoom).apply(); tabs.forEach { it.webView?.settings?.textZoom = textZoom } })
                             Text("Adjust webpage text without changing image or layout zoom.", color = Color.LightGray, style = MaterialTheme.typography.bodySmall)
                         }
                         HorizontalDivider(color = Color(0xFF29364B))
