@@ -206,6 +206,9 @@ private fun SudhaBrowserApp(context: Context) {
     var dataSaverEnabled by remember { mutableStateOf(prefs.getBoolean("data_saver", false)) }
     var showShortcuts by remember { mutableStateOf(prefs.getBoolean("show_shortcuts", true)) }
     var gestureNavigationEnabled by remember { mutableStateOf(prefs.getBoolean("gesture_navigation", true)) }
+    var volumeGestureEnabled by remember { mutableStateOf(prefs.getBoolean("volume_gesture", false)) }
+    var elementBlockerEnabled by remember { mutableStateOf(prefs.getBoolean("element_blocker", false)) }
+    var dnsProvider by remember { mutableStateOf(prefs.getString("dns_provider", "System default") ?: "System default") }
     var fullscreenVideo by remember { mutableStateOf<View?>(null) }
     var fullscreenCallback by remember { mutableStateOf<WebChromeClient.CustomViewCallback?>(null) }
     val originalSystemUi = remember { mutableIntStateOf(0) }
@@ -507,6 +510,30 @@ private fun SudhaBrowserApp(context: Context) {
                         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                             Column(Modifier.weight(1f)) { Text("Swipe navigation", color = Color.White, style = MaterialTheme.typography.titleMedium); Text("Swipe right to go back, left to go forward", color = Color.LightGray, style = MaterialTheme.typography.bodySmall) }
                             Switch(checked = gestureNavigationEnabled, onCheckedChange = { gestureNavigationEnabled = it; prefs.edit().putBoolean("gesture_navigation", it).apply() })
+                        }
+                        HorizontalDivider(color = Color(0xFF29364B))
+                        Text("GESTURES & TOOLS", color = Cyan, style = MaterialTheme.typography.labelLarge, letterSpacing = 2.sp)
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f)) { Text("Volume gesture", color = Color.White, style = MaterialTheme.typography.titleMedium); Text("Vertical swipe on the right edge adjusts media volume", color = Color.LightGray, style = MaterialTheme.typography.bodySmall) }
+                            Switch(checked = volumeGestureEnabled, onCheckedChange = { volumeGestureEnabled = it; prefs.edit().putBoolean("volume_gesture", it).apply() })
+                        }
+                        HorizontalDivider(color = Color(0xFF29364B))
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f)) { Text("Element blocker", color = Color.White, style = MaterialTheme.typography.titleMedium); Text("Tap unwanted items on a page to hide them", color = Color.LightGray, style = MaterialTheme.typography.bodySmall) }
+                            Switch(checked = elementBlockerEnabled, onCheckedChange = { enabled ->
+                                elementBlockerEnabled = enabled
+                                prefs.edit().putBoolean("element_blocker", enabled).apply()
+                                activeTab.webView?.evaluateJavascript(if (enabled) "(function(){if(window.__sudhaElementBlocker)return;window.__sudhaElementBlocker=true;window.__sudhaPickElement=true;document.addEventListener('click',function(e){if(!window.__sudhaPickElement)return;var el=e.target;if(!el||el===document.body)return;e.preventDefault();e.stopPropagation();el.style.setProperty('display','none','important');},true);})();" else "window.__sudhaPickElement=false;", null)
+                            })
+                        }
+                        Text("Hidden items return after a full page reload. This is a basic page-level blocker.", color = Color.Gray, style = MaterialTheme.typography.bodySmall)
+                        HorizontalDivider(color = Color(0xFF29364B))
+                        Text("DNS SETTINGS", color = Cyan, style = MaterialTheme.typography.labelLarge, letterSpacing = 2.sp)
+                        Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text("DNS provider preference", color = Color.White, style = MaterialTheme.typography.titleMedium)
+                            Text("WebView uses Android system DNS. This preference does not create an app-level DoH tunnel.", color = Color.LightGray, style = MaterialTheme.typography.bodySmall)
+                            OutlinedButton(onClick = { dnsProvider = when (dnsProvider) { "System default" -> "Cloudflare (1.1.1.1)"; "Cloudflare (1.1.1.1)" -> "Google (dns.google)"; else -> "System default" }; prefs.edit().putString("dns_provider", dnsProvider).apply() }, modifier = Modifier.fillMaxWidth()) { Text("Selected: $dnsProvider") }
+                            OutlinedButton(onClick = { runCatching { context.startActivity(Intent(android.provider.Settings.ACTION_WIRELESS_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } }, modifier = Modifier.fillMaxWidth()) { Text("Open Android network / Private DNS settings") }
                         }
                         HorizontalDivider(color = Color(0xFF29364B))
                         Text("WEBSITE & PRIVACY", color = Cyan, style = MaterialTheme.typography.labelLarge, letterSpacing = 2.sp)
