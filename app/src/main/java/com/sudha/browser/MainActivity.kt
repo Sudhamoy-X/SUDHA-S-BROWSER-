@@ -849,7 +849,22 @@ private fun SudhaBrowserApp(context: Context) {
                         val list = if (screen == "bookmarks" && sortBookmarksAZ) filteredList.sortedBy { it.title.lowercase() } else filteredList
                         Column(Modifier.weight(1f).fillMaxWidth()) {
                         OutlinedTextField(value = savedSearch, onValueChange = { savedSearch = it }, modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp), singleLine = true, placeholder = { Text("Search saved pages") }, leadingIcon = { Icon(Icons.Default.Search, null) })
-                        if (screen == "bookmarks") TextButton(onClick = { sortBookmarksAZ = !sortBookmarksAZ }, modifier = Modifier.align(Alignment.End)) { Text(if (sortBookmarksAZ) "Sort: A to Z" else "Sort: Recently saved", color = Cyan) }
+                        if (screen == "bookmarks") {
+                            Text("${bookmarks.size} saved bookmarks", color = Color.Gray, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(start = 16.dp))
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                                TextButton(onClick = { sortBookmarksAZ = !sortBookmarksAZ }) { Text(if (sortBookmarksAZ) "Sort: A–Z" else "Sort: Recent", color = Cyan) }
+                                TextButton(onClick = { importBookmarksText = ""; showImportBookmarksDialog = true }) { Text("Import", color = Cyan) }
+                                TextButton(onClick = {
+                                    val exportText = bookmarks.joinToString(separator = "
+") { it.title + " | " + it.url }
+                                    if (exportText.isNotBlank()) runCatching { context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, exportText), "Export bookmarks")) }
+                                }, enabled = bookmarks.isNotEmpty()) { Text("Export", color = Cyan) }
+                            }
+                            TextButton(onClick = {
+                                val unique = bookmarks.distinctBy { it.url }
+                                bookmarks.clear(); bookmarks.addAll(unique); persist("bookmarks", bookmarks)
+                            }, enabled = bookmarks.size > 1, modifier = Modifier.align(Alignment.End)) { Text("Remove duplicates", color = Cyan) }
+                        }
                         if (list.isEmpty()) Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) { Text(if (screen == "bookmarks") "No bookmarks yet" else "No browsing history yet", color = Color.LightGray) }
                         else LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             items(list.toList()) { item ->
