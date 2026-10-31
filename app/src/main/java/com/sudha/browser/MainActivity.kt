@@ -416,57 +416,110 @@ private fun SudhaBrowserApp(context: Context) {
                     IconButton(onClick = { navigate(address) }, modifier = Modifier.size(36.dp)) { Icon(Icons.Default.ArrowForward, "Go", tint = Cyan, modifier = Modifier.size(20.dp)) }
                 }
                 if (showHomeDashboard) {
-                    Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(androidx.compose.foundation.rememberScrollState()).padding(horizontal = 18.dp), horizontalAlignment = Alignment.Start) {
-                        Spacer(Modifier.height(22.dp))
-                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                            SudhaBrandMark(Modifier.size(54.dp))
-                            Spacer(Modifier.width(12.dp))
-                            Column(Modifier.weight(1f)) {
-                                Text("SUDHA", color = Color.White, style = MaterialTheme.typography.headlineMedium, letterSpacing = 5.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
-                                Text("BROWSER", color = Cyan, style = MaterialTheme.typography.labelSmall, letterSpacing = 4.sp)
-                            }
-                            Box(Modifier.background(Color(0xFF102B2D), RoundedCornerShape(50)).border(1.dp, Color(0xFF24605A), RoundedCornerShape(50)).padding(horizontal = 11.dp, vertical = 7.dp)) {
-                                Text("READY TO BROWSE", color = Color(0xFF78E0C3), style = MaterialTheme.typography.labelSmall, letterSpacing = 0.6.sp)
+                    Column(
+                        Modifier.weight(1f).fillMaxWidth()
+                            .background(Brush.verticalGradient(listOf(Color(0xFF0A1020), Color(0xFF111A30), Color(0xFF080D19))))
+                            .verticalScroll(androidx.compose.foundation.rememberScrollState())
+                            .padding(horizontal = 18.dp),
+                        horizontalAlignment = Alignment.Start
+                    ) {
+                        Spacer(Modifier.height(18.dp))
+                        Box(
+                            Modifier.fillMaxWidth()
+                                .background(Brush.linearGradient(listOf(Color(0x553B70C8), Color(0x3326C7E8), Color(0x222D1A59))), RoundedCornerShape(28.dp))
+                                .border(1.dp, Color(0x557EA8E8), RoundedCornerShape(28.dp))
+                                .padding(horizontal = 17.dp, vertical = 18.dp)
+                        ) {
+                            Column {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    SudhaBrandMark(Modifier.size(58.dp))
+                                    Spacer(Modifier.width(13.dp))
+                                    Column(Modifier.weight(1f)) {
+                                        Text("SUDHA", color = Color.White, style = MaterialTheme.typography.headlineMedium, letterSpacing = 4.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+                                        Text("B R O W S E R", color = Color(0xFF9FEAFF), style = MaterialTheme.typography.labelSmall, letterSpacing = 1.5.sp)
+                                    }
+                                    Surface(color = Color(0x3324D5C5), shape = RoundedCornerShape(30.dp), border = androidx.compose.foundation.BorderStroke(1.dp, Color(0x6646DCCB))) {
+                                        Text("● ONLINE", color = Color(0xFF8AF0D8), style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp))
+                                    }
+                                }
+                                Spacer(Modifier.height(17.dp))
+                                Text("Your space on the web.", color = Color.White, style = MaterialTheme.typography.titleLarge, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
+                                Text("A clearer, calmer way to explore.", color = Color(0xFFB2C5E3), style = MaterialTheme.typography.bodySmall)
                             }
                         }
-                        Spacer(Modifier.height(28.dp))
-                        Text("Explore without limits.", color = Color.White, style = MaterialTheme.typography.headlineSmall, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
-                        Text("Search the web or enter a website address", color = Color(0xFF91A7C5), style = MaterialTheme.typography.bodySmall)
-                        Spacer(Modifier.height(14.dp))
-                        Row(Modifier.fillMaxWidth().background(Brush.horizontalGradient(listOf(Color(0xFF1B3457), Color(0xFF101C32))), RoundedCornerShape(20.dp)).border(1.dp, Color(0xFF37649A), RoundedCornerShape(20.dp)).padding(start = 15.dp, end = 7.dp, top = 7.dp, bottom = 7.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Search, null, tint = Cyan, modifier = Modifier.size(23.dp))
+                        Spacer(Modifier.height(19.dp))
+                        Text("SEARCH THE WEB", color = Color(0xFFB7C9E5), style = MaterialTheme.typography.labelMedium, letterSpacing = 1.5.sp)
+                        Spacer(Modifier.height(9.dp))
+                        Row(
+                            Modifier.fillMaxWidth()
+                                .background(Brush.linearGradient(listOf(Color(0xCC263C60), Color(0xAA182942))), RoundedCornerShape(22.dp))
+                                .border(1.dp, Color(0x7787B8EA), RoundedCornerShape(22.dp))
+                                .padding(start = 15.dp, end = 7.dp, top = 7.dp, bottom = 7.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(Icons.Default.Search, null, tint = Color(0xFF8DEBFF), modifier = Modifier.size(23.dp))
                             Spacer(Modifier.width(10.dp))
-                            TextField(value = address, onValueChange = { address = it }, modifier = Modifier.weight(1f), placeholder = { Text("Search Google or type URL", color = Color(0xFF9BAFCB), fontSize = 14.sp) }, singleLine = true, colors = TextFieldDefaults.colors(focusedTextColor = Color.White, unfocusedTextColor = Color.White, focusedContainerColor = Color.Transparent, unfocusedContainerColor = Color.Transparent, focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent, cursorColor = Cyan), keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go), keyboardActions = KeyboardActions(onGo = { navigate(address) }))
-                            IconButton(onClick = { navigate(address) }, modifier = Modifier.background(Cyan.copy(alpha = 0.14f), CircleShape)) { Icon(Icons.Default.ArrowForward, "Search", tint = Cyan) }
+                            TextField(
+                                value = address, onValueChange = { address = it }, modifier = Modifier.weight(1f),
+                                placeholder = { Text("Search or enter website", color = Color(0xFFB4C6E0), fontSize = 14.sp) },
+                                singleLine = true,
+                                colors = TextFieldDefaults.colors(focusedTextColor = Color.White, unfocusedTextColor = Color.White, focusedContainerColor = Color.Transparent, unfocusedContainerColor = Color.Transparent, focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent, cursorColor = Cyan),
+                                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go), keyboardActions = KeyboardActions(onGo = { navigate(address) })
+                            )
+                            IconButton(onClick = { navigate(address) }, modifier = Modifier.background(Brush.linearGradient(listOf(Color(0xFF47DDF3), Color(0xFF6798FF))), CircleShape)) {
+                                Icon(Icons.Default.ArrowForward, "Search", tint = Color(0xFF071321))
+                            }
                         }
-                        Spacer(Modifier.height(27.dp))
+                        Spacer(Modifier.height(23.dp))
                         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                            Column(Modifier.weight(1f)) { Text("YOUR SHORTCUTS", color = Color.White, style = MaterialTheme.typography.titleSmall, letterSpacing = 1.4.sp); Text("Your everyday destinations", color = Color(0xFF8299B8), style = MaterialTheme.typography.labelSmall) }
-                            Text("EDIT IN SETTINGS", color = Color(0xFF6E9DD6), style = MaterialTheme.typography.labelSmall)
+                            Column(Modifier.weight(1f)) {
+                                Text("YOUR SHORTCUTS", color = Color.White, style = MaterialTheme.typography.titleSmall, letterSpacing = 1.3.sp)
+                                Text("Your everyday destinations", color = Color(0xFF9BAFCD), style = MaterialTheme.typography.labelSmall)
+                            }
+                            Text("EDIT IN SETTINGS", color = Color(0xFF8EC7F4), style = MaterialTheme.typography.labelSmall)
                         }
                         if (showShortcuts) {
-                            Spacer(Modifier.height(12.dp))
-                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Spacer(Modifier.height(11.dp))
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
                                 listOf("Google" to "https://www.google.com", "YouTube" to "https://m.youtube.com", "Gmail" to "https://mail.google.com", "Maps" to "https://maps.google.com").forEachIndexed { index, item ->
-                                    val tint = listOf(Color(0xFF55B7FF), Color(0xFFFF5577), Color(0xFFFF657D), Color(0xFF55D6B0))[index]
-                                    Column(Modifier.weight(1f).background(Brush.verticalGradient(listOf(Color(0xFF1A2B45), Color(0xFF101A2B))), RoundedCornerShape(18.dp)).border(1.dp, Color(0xFF2A4263), RoundedCornerShape(18.dp)).clickable { navigate(item.second) }.padding(vertical = 15.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                                        Box(Modifier.size(39.dp).background(tint.copy(alpha = 0.14f), CircleShape), contentAlignment = Alignment.Center) { Text(item.first.take(1), color = tint, style = MaterialTheme.typography.titleLarge, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold) }
-                                        Spacer(Modifier.height(8.dp)); Text(item.first, color = Color(0xFFE0ECFC), style = MaterialTheme.typography.labelMedium, maxLines = 1)
+                                    val tint = listOf(Color(0xFF68C8FF), Color(0xFFFF7898), Color(0xFFFF8A9E), Color(0xFF72E3C2))[index]
+                                    Column(
+                                        Modifier.weight(1f).background(Brush.verticalGradient(listOf(Color(0xAAFFFFFF).copy(alpha = 0.12f), Color(0x331E3454))), RoundedCornerShape(19.dp))
+                                            .border(1.dp, Color(0x557EA7D8), RoundedCornerShape(19.dp))
+                                            .clickable { navigate(item.second) }.padding(vertical = 14.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally
+                                    ) {
+                                        Box(Modifier.size(38.dp).background(tint.copy(alpha = 0.17f), CircleShape).border(1.dp, tint.copy(alpha = 0.35f), CircleShape), contentAlignment = Alignment.Center) {
+                                            Text(item.first.take(1), color = tint, style = MaterialTheme.typography.titleLarge, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+                                        }
+                                        Spacer(Modifier.height(7.dp))
+                                        Text(item.first, color = Color(0xFFE8F2FF), style = MaterialTheme.typography.labelMedium, maxLines = 1)
                                     }
                                 }
                             }
                         }
-                        Spacer(Modifier.height(28.dp))
+                        Spacer(Modifier.height(23.dp))
                         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                            Column(Modifier.weight(1f)) { Text("QUICK ACCESS", color = Color.White, style = MaterialTheme.typography.titleSmall, letterSpacing = 1.4.sp); Text("Your browser, organised", color = Color(0xFF8299B8), style = MaterialTheme.typography.labelSmall) }
-                            Text("CRAFTED BY SUDHAMOY", color = Color(0xFF6E9DD6), style = MaterialTheme.typography.labelSmall)
+                            Column(Modifier.weight(1f)) {
+                                Text("QUICK ACCESS", color = Color.White, style = MaterialTheme.typography.titleSmall, letterSpacing = 1.3.sp)
+                                Text("Everything you need, one tap away", color = Color(0xFF9BAFCD), style = MaterialTheme.typography.labelSmall)
+                            }
+                            Text("SUDHA", color = Color(0xFF8EC7F4), style = MaterialTheme.typography.labelSmall, letterSpacing = 2.sp)
                         }
-                        Spacer(Modifier.height(12.dp))
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            listOf(Triple("Bookmarks", "bookmarks", Color(0xFF4CBFFF)), Triple("History", "history", Color(0xFFB17BFF)), Triple("Downloads", "downloads", Color(0xFF52D6B0)), Triple("Settings", "settings", Color(0xFFFFB86B))).forEach { item ->
-                                Column(Modifier.weight(1f).background(Color(0xFF111D30), RoundedCornerShape(17.dp)).border(1.dp, Color(0xFF263D5C), RoundedCornerShape(17.dp)).clickable { screen = item.second }.padding(vertical = 14.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Box(Modifier.size(35.dp).background(item.third.copy(alpha = 0.13f), CircleShape), contentAlignment = Alignment.Center) { Text(item.first.take(1), color = item.third, style = MaterialTheme.typography.titleMedium, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold) }
-                                    Spacer(Modifier.height(7.dp)); Text(item.first, color = Color(0xFFD7E8FF), style = MaterialTheme.typography.labelSmall, maxLines = 1)
+                        Spacer(Modifier.height(11.dp))
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                            listOf(Triple("Bookmarks", "bookmarks", Color(0xFF66C8FF)), Triple("History", "history", Color(0xFFC09AFF)), Triple("Downloads", "downloads", Color(0xFF72E3C2)), Triple("Settings", "settings", Color(0xFFFFC27D))).forEach { item ->
+                                Column(
+                                    Modifier.weight(1f).background(Brush.verticalGradient(listOf(Color(0xAA30496A), Color(0x66304460))), RoundedCornerShape(18.dp))
+                                        .border(1.dp, Color(0x557A9CC4), RoundedCornerShape(18.dp))
+                                        .clickable { screen = item.second }.padding(vertical = 13.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Box(Modifier.size(34.dp).background(item.third.copy(alpha = 0.16f), CircleShape), contentAlignment = Alignment.Center) {
+                                        Text(item.first.take(1), color = item.third, style = MaterialTheme.typography.titleMedium, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+                                    }
+                                    Spacer(Modifier.height(7.dp))
+                                    Text(item.first, color = Color(0xFFE4EEFC), style = MaterialTheme.typography.labelSmall, maxLines = 1)
                                 }
                             }
                         }
