@@ -198,6 +198,8 @@ private fun SudhaBrowserApp(context: Context) {
     var imagesEnabled by remember { mutableStateOf(prefs.getBoolean("images_enabled", true)) }
     var cookiesEnabled by remember { mutableStateOf(prefs.getBoolean("cookies_enabled", true)) }
     var safeBrowsingEnabled by remember { mutableStateOf(prefs.getBoolean("safe_browsing", true)) }
+    var popupsBlocked by remember { mutableStateOf(prefs.getBoolean("block_popups", true)) }
+    var thirdPartyCookies by remember { mutableStateOf(prefs.getBoolean("third_party_cookies", false)) }
     var dataSaverEnabled by remember { mutableStateOf(prefs.getBoolean("data_saver", false)) }
     var showShortcuts by remember { mutableStateOf(prefs.getBoolean("show_shortcuts", true)) }
     var gestureNavigationEnabled by remember { mutableStateOf(prefs.getBoolean("gesture_navigation", true)) }
@@ -404,10 +406,10 @@ private fun SudhaBrowserApp(context: Context) {
                         },
                         factory = { ctx: Context ->
                         (activeTab.webView ?: WebView(ctx).also { activeTab.webView = it }).apply {
-                            settings.javaScriptEnabled = javaScriptEnabled; settings.domStorageEnabled = true; settings.loadsImagesAutomatically = imagesEnabled && !dataSaverEnabled; settings.blockNetworkImage = dataSaverEnabled; settings.javaScriptCanOpenWindowsAutomatically = false
+                            settings.javaScriptEnabled = javaScriptEnabled; settings.domStorageEnabled = true; settings.loadsImagesAutomatically = imagesEnabled && !dataSaverEnabled; settings.blockNetworkImage = dataSaverEnabled; settings.javaScriptCanOpenWindowsAutomatically = !popupsBlocked; settings.setSupportMultipleWindows(!popupsBlocked)
                             settings.safeBrowsingEnabled = safeBrowsingEnabled
                             CookieManager.getInstance().setAcceptCookie(cookiesEnabled)
-                            CookieManager.getInstance().setAcceptThirdPartyCookies(this, false)
+                            CookieManager.getInstance().setAcceptThirdPartyCookies(this, thirdPartyCookies)
                             settings.textZoom = textZoom
                             settings.setSupportZoom(true); settings.builtInZoomControls = true; settings.displayZoomControls = false
                             settings.userAgentString = if (desktopMode) "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36" else android.webkit.WebSettings.getDefaultUserAgent(ctx)
@@ -465,6 +467,7 @@ private fun SudhaBrowserApp(context: Context) {
                 }
                 when (screen) {
                     "settings" -> Column(Modifier.weight(1f).fillMaxWidth().padding(horizontal = 18.dp).verticalScroll(androidx.compose.foundation.rememberScrollState()), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                        Text("GENERAL", color = Cyan, style = MaterialTheme.typography.labelLarge, letterSpacing = 2.sp)
                         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                             Column(Modifier.weight(1f)) { Text("Data Saver", color = Color.White, style = MaterialTheme.typography.titleMedium); Text("Blocks page images to reduce mobile data use", color = Color.LightGray, style = MaterialTheme.typography.bodySmall) }
                             Switch(checked = dataSaverEnabled, onCheckedChange = { enabled -> dataSaverEnabled = enabled; prefs.edit().putBoolean("data_saver", enabled).apply(); tabs.forEach { tab -> tab.webView?.settings?.apply { blockNetworkImage = enabled; loadsImagesAutomatically = imagesEnabled && !enabled } } })
@@ -475,6 +478,7 @@ private fun SudhaBrowserApp(context: Context) {
                             Switch(checked = gestureNavigationEnabled, onCheckedChange = { gestureNavigationEnabled = it; prefs.edit().putBoolean("gesture_navigation", it).apply() })
                         }
                         HorizontalDivider(color = Color(0xFF29364B))
+                        Text("WEBSITE & PRIVACY", color = Cyan, style = MaterialTheme.typography.labelLarge, letterSpacing = 2.sp)
                         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                             Column(Modifier.weight(1f)) { Text("JavaScript", color = Color.White, style = MaterialTheme.typography.titleMedium); Text("Some websites require JavaScript to work", color = Color.LightGray, style = MaterialTheme.typography.bodySmall) }
                             Switch(checked = javaScriptEnabled, onCheckedChange = { javaScriptEnabled = it; prefs.edit().putBoolean("javascript_enabled", it).apply(); tabs.forEach { tab -> tab.webView?.settings?.javaScriptEnabled = it } })
@@ -495,6 +499,17 @@ private fun SudhaBrowserApp(context: Context) {
                             Switch(checked = safeBrowsingEnabled, onCheckedChange = { safeBrowsingEnabled = it; prefs.edit().putBoolean("safe_browsing", it).apply(); tabs.forEach { tab -> tab.webView?.settings?.safeBrowsingEnabled = it } })
                         }
                         HorizontalDivider(color = Color(0xFF29364B))
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f)) { Text("Block pop-ups", color = Color.White, style = MaterialTheme.typography.titleMedium); Text("Prevent websites from opening unexpected windows", color = Color.LightGray, style = MaterialTheme.typography.bodySmall) }
+                            Switch(checked = popupsBlocked, onCheckedChange = { enabled -> popupsBlocked = enabled; prefs.edit().putBoolean("block_popups", enabled).apply(); tabs.forEach { tab -> tab.webView?.settings?.apply { javaScriptCanOpenWindowsAutomatically = !enabled; setSupportMultipleWindows(!enabled) } } })
+                        }
+                        HorizontalDivider(color = Color(0xFF29364B))
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f)) { Text("Third-party cookies", color = Color.White, style = MaterialTheme.typography.titleMedium); Text("Allow cross-site cookies when a website requires them", color = Color.LightGray, style = MaterialTheme.typography.bodySmall) }
+                            Switch(checked = thirdPartyCookies, onCheckedChange = { enabled -> thirdPartyCookies = enabled; prefs.edit().putBoolean("third_party_cookies", enabled).apply(); tabs.forEach { tab -> tab.webView?.let { CookieManager.getInstance().setAcceptThirdPartyCookies(it, enabled) } } })
+                        }
+                        HorizontalDivider(color = Color(0xFF29364B))
+                        Text("HOME & SEARCH", color = Cyan, style = MaterialTheme.typography.labelLarge, letterSpacing = 2.sp)
                         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                             Column(Modifier.weight(1f)) {
                                 Text("Homepage shortcuts", color = Color.White, style = MaterialTheme.typography.titleMedium)
@@ -562,6 +577,7 @@ private fun SudhaBrowserApp(context: Context) {
                             Text("Adjust webpage text without changing image or layout zoom.", color = Color.LightGray, style = MaterialTheme.typography.bodySmall)
                         }
                         HorizontalDivider(color = Color(0xFF29364B))
+                        Text("PAGE TOOLS", color = Cyan, style = MaterialTheme.typography.labelLarge, letterSpacing = 2.sp)
                         Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                             Text("Page tools", color = Color.White, style = MaterialTheme.typography.titleMedium)
                             Text("Extra reading and accessibility tools for the current page.", color = Color.LightGray, style = MaterialTheme.typography.bodySmall)
@@ -601,6 +617,7 @@ private fun SudhaBrowserApp(context: Context) {
                             }
                         }
                         HorizontalDivider(color = Color(0xFF29364B))
+                        Text("APP & UPDATES", color = Cyan, style = MaterialTheme.typography.labelLarge, letterSpacing = 2.sp)
                         Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             Text("App updates", color = Color.White, style = MaterialTheme.typography.titleMedium)
                             Text(updateStatus, color = Color.LightGray, style = MaterialTheme.typography.bodySmall)
