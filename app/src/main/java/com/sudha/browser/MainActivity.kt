@@ -1,6 +1,7 @@
 package com.sudha.browser
 
 import android.annotation.SuppressLint
+import android.media.AudioManager
 import android.app.DownloadManager
 import android.print.PrintAttributes
 import android.print.PrintManager
