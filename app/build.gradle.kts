@@ -10,8 +10,8 @@ android {
         applicationId = "com.sudha.browser"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = providers.gradleProperty("versionCode").orElse("1").get().toInt()
+        versionName = "1.0.$versionCode"
     }
     buildFeatures { compose = true }
     compileOptions {
