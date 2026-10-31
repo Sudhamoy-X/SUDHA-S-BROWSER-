@@ -932,6 +932,46 @@ private fun SudhaBrowserApp(context: Context) {
                     }
                 }
             }
+            if (showBookmarkEditDialog) {
+                AlertDialog(
+                    onDismissRequest = { showBookmarkEditDialog = false },
+                    title = { Text("Edit bookmark") },
+                    text = { OutlinedTextField(value = bookmarkEditTitle, onValueChange = { bookmarkEditTitle = it }, singleLine = true, label = { Text("Bookmark title") }) },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            val index = bookmarks.indexOfFirst { it.url == bookmarkEditUrl }
+                            if (index >= 0 && bookmarkEditTitle.isNotBlank()) {
+                                bookmarks[index] = SavedPage(bookmarkEditTitle.trim(), bookmarkEditUrl)
+                                persist("bookmarks", bookmarks)
+                            }
+                            showBookmarkEditDialog = false
+                        }) { Text("Save") }
+                    },
+                    dismissButton = { TextButton(onClick = { showBookmarkEditDialog = false }) { Text("Cancel") } }
+                )
+            }
+            if (showImportBookmarksDialog) {
+                AlertDialog(
+                    onDismissRequest = { showImportBookmarksDialog = false },
+                    title = { Text("Import bookmarks") },
+                    text = {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text("Paste one URL per line. Existing URLs will be skipped.")
+                            OutlinedTextField(value = importBookmarksText, onValueChange = { importBookmarksText = it }, modifier = Modifier.fillMaxWidth(), minLines = 4, maxLines = 7, placeholder = { Text("https://example.com") })
+                        }
+                    },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            importBookmarksText.lines().map { it.trim() }.filter { it.startsWith("https://") || it.startsWith("http://") }.forEach { url ->
+                                if (bookmarks.none { it.url == url }) bookmarks.add(SavedPage(Uri.parse(url).host ?: url, url))
+                            }
+                            persist("bookmarks", bookmarks)
+                            showImportBookmarksDialog = false
+                        }) { Text("Import") }
+                    },
+                    dismissButton = { TextButton(onClick = { showImportBookmarksDialog = false }) { Text("Cancel") } }
+                )
+            }
             if (showClearDataDialog) {
                 AlertDialog(
                     onDismissRequest = { showClearDataDialog = false },
