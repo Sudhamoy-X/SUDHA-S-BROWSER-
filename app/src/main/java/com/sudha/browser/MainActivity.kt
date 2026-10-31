@@ -15,6 +15,9 @@ import kotlinx.coroutines.withContext
 import java.net.HttpURLConnection
 import java.net.URL
 import java.io.ByteArrayInputStream
+import android.app.Activity
+import android.widget.FrameLayout
+import android.view.View
 import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Bundle
@@ -203,6 +206,18 @@ private fun SudhaBrowserApp(context: Context) {
     var dataSaverEnabled by remember { mutableStateOf(prefs.getBoolean("data_saver", false)) }
     var showShortcuts by remember { mutableStateOf(prefs.getBoolean("show_shortcuts", true)) }
     var gestureNavigationEnabled by remember { mutableStateOf(prefs.getBoolean("gesture_navigation", true)) }
+    var fullscreenVideo by remember { mutableStateOf<View?>(null) }
+    var fullscreenCallback by remember { mutableStateOf<WebChromeClient.CustomViewCallback?>(null) }
+    val originalSystemUi = remember { mutableIntStateOf(0) }
+    fun exitVideoFullscreen() {
+        val activity = context as? Activity
+        val decor = activity?.window?.decorView as? FrameLayout
+        fullscreenVideo?.let { decor?.removeView(it) }
+        fullscreenVideo = null
+        fullscreenCallback?.onCustomViewHidden()
+        fullscreenCallback = null
+        if (activity != null) activity.window.decorView.systemUiVisibility = originalSystemUi.intValue
+    }
     var findText by remember { mutableStateOf("") }
     BrowserContentFilter.adsEnabled = adsEnabled
     BrowserContentFilter.trackingEnabled = trackingEnabled
@@ -288,8 +303,10 @@ private fun SudhaBrowserApp(context: Context) {
     }
     fun openSaved(item: SavedPage) { activeTab.url = item.url; activeTab.title = item.title; address = item.url; screen = "browser"; showHomeDashboard = false; activeTab.webView?.loadUrl(item.url) }
 
-    BackHandler(enabled = screen != "browser" || !showHomeDashboard || activeTab.webView?.canGoBack() == true) {
-        if (screen != "browser") {
+    BackHandler(enabled = fullscreenVideo != null || screen != "browser" || !showHomeDashboard || activeTab.webView?.canGoBack() == true) {
+        if (fullscreenVideo != null) {
+            exitVideoFullscreen()
+        } else if (screen != "browser") {
             screen = "browser"
             showHomeDashboard = activeTab.url.isBlank()
             address = activeTab.url
@@ -452,7 +469,21 @@ private fun SudhaBrowserApp(context: Context) {
                                     }
                                 }
                             }
-                            webChromeClient = object : WebChromeClient() { override fun onProgressChanged(view: WebView?, newProgress: Int) { progress = newProgress } }
+                            webChromeClient = object : WebChromeClient() {
+                                override fun onProgressChanged(view: WebView?, newProgress: Int) { progress = newProgress }
+                                override fun onShowCustomView(view: View?, callback: CustomViewCallback?) {
+                                    val activity = context as? Activity
+                                    val decor = activity?.window?.decorView as? FrameLayout
+                                    if (view == null || decor == null) { callback?.onCustomViewHidden(); return }
+                                    if (fullscreenVideo != null) { callback?.onCustomViewHidden(); return }
+                                    originalSystemUi.intValue = activity.window.decorView.systemUiVisibility
+                                    fullscreenVideo = view
+                                    fullscreenCallback = callback
+                                    decor.addView(view, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
+                                    activity.window.decorView.systemUiVisibility = (View.SYSTEM_UI_FLAG_FULLSCREEN or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY or View.SYSTEM_UI_FLAG_LAYOUT_STABLE)
+                                }
+                                override fun onHideCustomView() { exitVideoFullscreen() }
+                            }
                             if (this.url.isNullOrBlank() && activeTab.url.isNotBlank()) loadUrl(activeTab.url)
                         }
                     }, update = { view: WebView -> if (view.url != activeTab.url && activeTab.url.isNotBlank()) view.loadUrl(activeTab.url) })
