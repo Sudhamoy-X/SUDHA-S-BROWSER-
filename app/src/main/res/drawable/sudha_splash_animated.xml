@@ -1,0 +1,4 @@
+<animated-vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:drawable="@drawable/sudha_splash_vector">
+    <target android:name="splashGroup" android:animation="@animator/sudha_splash_rotate" />
+</animated-vector>
