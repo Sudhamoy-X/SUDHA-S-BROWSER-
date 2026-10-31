@@ -16,6 +16,7 @@ import kotlinx.coroutines.withContext
 import java.net.HttpURLConnection
 import java.net.URL
 import java.io.ByteArrayInputStream
+import java.io.File
 import android.app.Activity
 import android.widget.FrameLayout
 import android.view.View
@@ -193,6 +194,9 @@ private fun SudhaBrowserApp(context: Context) {
     var bookmarkEditUrl by remember { mutableStateOf("") }
     var bookmarkEditTitle by remember { mutableStateOf("") }
     var showImportBookmarksDialog by remember { mutableStateOf(false) }
+    var showPageTools by remember { mutableStateOf(false) }
+    var showPageInfoDialog by remember { mutableStateOf(false) }
+    var pageInfoText by remember { mutableStateOf("") }
     var importBookmarksText by remember { mutableStateOf("") }
     var nextTabId by remember { mutableIntStateOf(2) }
     var activeTabId by remember { mutableIntStateOf(1) }
@@ -405,6 +409,69 @@ private fun SudhaBrowserApp(context: Context) {
                         IconButton(onClick = { addTab() }) { Icon(Icons.Default.Add, "New tab", tint = Color.White) }
                         IconButton(onClick = { showHomeDashboard = true; address = "" }) {
                             Icon(Icons.Default.Home, "Home page", tint = Color.White)
+                        }
+                        Box {
+                            IconButton(onClick = { showPageTools = true }) { Icon(Icons.Default.MoreVert, "More page tools", tint = Cyan) }
+                            DropdownMenu(expanded = showPageTools, onDismissRequest = { showPageTools = false }) {
+                                DropdownMenuItem(text = { Text("Translate page to English") }, onClick = {
+                                    showPageTools = false
+                                    if (activeTab.url.startsWith("http")) navigate("https://translate.google.com/translate?sl=auto&tl=en&u=" + Uri.encode(activeTab.url))
+                                })
+                                DropdownMenuItem(text = { Text("Page information") }, onClick = {
+                                    showPageTools = false
+                                    val uri = Uri.parse(activeTab.url)
+                                    pageInfoText = "Title: ${activeTab.title}\nAddress: ${activeTab.url}\nDomain: ${uri.host ?: "Unknown"}\nScheme: ${uri.scheme ?: "Unknown"}"
+                                    showPageInfoDialog = true
+                                })
+                                DropdownMenuItem(text = { Text("Copy page title") }, onClick = {
+                                    showPageTools = false
+                                    (context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("Page title", activeTab.title))
+                                })
+                                DropdownMenuItem(text = { Text("Copy visible page text") }, onClick = {
+                                    showPageTools = false
+                                    activeTab.webView?.evaluateJavascript("(function(){return document.body ? document.body.innerText : '';})()") { raw ->
+                                        val value = runCatching { org.json.JSONTokener(raw).nextValue() as? String }.getOrNull().orEmpty()
+                                        if (value.isNotBlank()) (context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("Page text", value))
+                                    }
+                                })
+                                DropdownMenuItem(text = { Text("Share visible page text") }, onClick = {
+                                    showPageTools = false
+                                    activeTab.webView?.evaluateJavascript("(function(){return document.body ? document.body.innerText : '';})()") { raw ->
+                                        val value = runCatching { org.json.JSONTokener(raw).nextValue() as? String }.getOrNull().orEmpty()
+                                        if (value.isNotBlank()) runCatching { context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, value.take(12000)), "Share page text")) }
+                                    }
+                                })
+                                DropdownMenuItem(text = { Text("Save offline page copy") }, onClick = {
+                                    showPageTools = false
+                                    val folder = File(context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS), "OfflinePages")
+                                    folder.mkdirs()
+                                    val fileName = "page_${System.currentTimeMillis()}.mht"
+                                    activeTab.webView?.saveWebArchive(File(folder, fileName).absolutePath, false) { saved ->
+                                        android.widget.Toast.makeText(context, if (saved.isNullOrBlank()) "Could not save offline copy" else "Offline copy saved in app Documents", android.widget.Toast.LENGTH_LONG).show()
+                                    }
+                                })
+                                DropdownMenuItem(text = { Text("Clear page cache and reload") }, onClick = {
+                                    showPageTools = false
+                                    activeTab.webView?.apply { clearCache(false); reload() }
+                                })
+                                DropdownMenuItem(text = { Text("Open in another browser") }, onClick = {
+                                    showPageTools = false
+                                    if (activeTab.url.startsWith("http")) runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(activeTab.url))) }
+                                })
+                                DropdownMenuItem(text = { Text("Open page source") }, onClick = {
+                                    showPageTools = false
+                                    if (activeTab.url.startsWith("http")) {
+                                        val sourceUrl = "view-source:" + activeTab.url
+                                        val sourceTab = BrowserTab(nextTabId++, sourceUrl, "Page source")
+                                        tabs.add(sourceTab); activeTabId = sourceTab.id; address = sourceUrl; showHomeDashboard = false
+                                    }
+                                })
+                                DropdownMenuItem(text = { Text("Copy website domain") }, onClick = {
+                                    showPageTools = false
+                                    val domain = Uri.parse(activeTab.url).host.orEmpty()
+                                    if (domain.isNotBlank()) (context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("Website domain", domain))
+                                })
+                            }
                         }
                     }
                 }
@@ -930,6 +997,14 @@ private fun SudhaBrowserApp(context: Context) {
                         }
                     }
                 }
+            }
+            if (showPageInfoDialog) {
+                AlertDialog(
+                    onDismissRequest = { showPageInfoDialog = false },
+                    title = { Text("Page information") },
+                    text = { Text(pageInfoText) },
+                    confirmButton = { TextButton(onClick = { showPageInfoDialog = false }) { Text("Close") } }
+                )
             }
             if (showBookmarkEditDialog) {
                 AlertDialog(
